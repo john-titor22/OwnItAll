@@ -1,0 +1,111 @@
+import {
+  ref, set, get, update, push, onValue, off,
+} from 'firebase/database';
+import { db } from './config';
+import { GameState, Player, PropertyState } from '../game/types';
+import { BOARD, STARTING_MONEY, PLAYER_COLORS } from '../game/boardData';
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function buildInitialProperties(): Record<string, PropertyState> {
+  const props: Record<string, PropertyState> = {};
+  BOARD.forEach((tile) => {
+    if (tile.type === 'property' || tile.type === 'station') {
+      props[String(tile.id)] = { ownerId: '', level: 0 };
+    }
+  });
+  return props;
+}
+
+function makePlayer(id: string, name: string, colorIndex: number): Player {
+  return {
+    id,
+    name,
+    color: PLAYER_COLORS[colorIndex] ?? '#FFFFFF',
+    position: 0,
+    money: STARTING_MONEY,
+    ownedProperties: {},
+    inJail: false,
+    jailTurns: 0,
+    isBankrupt: false,
+  };
+}
+
+// ─── Public API ─────────────────────────────────────────────────────────────
+
+export async function createGame(
+  hostId: string,
+  hostName: string
+): Promise<string> {
+  const gamesRef = ref(db, 'games');
+  const newRef   = push(gamesRef);
+  const gameId   = newRef.key!;
+
+  const host = makePlayer(hostId, hostName, 0);
+
+  const state: GameState = {
+    id:                 gameId,
+    status:             'waiting',
+    currentPlayerIndex: 0,
+    players:            { [hostId]: host },
+    playerOrder:        [hostId],
+    properties:         buildInitialProperties(),
+    log:                [`${hostName} created the game`],
+    diceResult:         null,
+    phase:              'roll',
+    createdBy:          hostId,
+  };
+
+  await set(newRef, state);
+  return gameId;
+}
+
+export async function joinGame(
+  gameId: string,
+  playerId: string,
+  playerName: string
+): Promise<void> {
+  const gameRef  = ref(db, `games/${gameId}`);
+  const snapshot = await get(gameRef);
+
+  if (!snapshot.exists()) throw new Error('Game not found');
+
+  const game: GameState = snapshot.val();
+  if (game.status !== 'waiting')                    throw new Error('Game already started');
+  if (Object.keys(game.players).length >= 4)        throw new Error('Game is full (max 4 players)');
+  if (game.players[playerId])                       throw new Error('You are already in this game');
+
+  const colorIndex = Object.keys(game.players).length;
+  const newPlayer  = makePlayer(playerId, playerName, colorIndex);
+
+  await update(gameRef, {
+    [`players/${playerId}`]:  newPlayer,
+    playerOrder:              [...game.playerOrder, playerId],
+    log:                      [...game.log, `${playerName} joined`],
+  });
+}
+
+export async function startGame(gameId: string): Promise<void> {
+  await update(ref(db, `games/${gameId}`), { status: 'playing' });
+}
+
+/**
+ * Multi-path update — keys can contain "/" for nested paths, e.g.:
+ *   { 'players/uid/money': 500, 'phase': 'end_turn' }
+ * Firebase RTDB resolves these relative to the game ref.
+ */
+export async function patchGame(
+  gameId: string,
+  patches: Record<string, unknown>
+): Promise<void> {
+  await update(ref(db, `games/${gameId}`), patches);
+}
+
+export function subscribeToGame(
+  gameId: string,
+  callback: (state: GameState | null) => void
+): () => void {
+  const gameRef = ref(db, `games/${gameId}`);
+  onValue(gameRef, (snap) => callback(snap.exists() ? (snap.val() as GameState) : null));
+  return () => off(gameRef);
+}

@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Own It All",
+    "slug": "own-it-all",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "ownitall",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": ["**/*"],
+    "ios": { "supportsTablet": false },
+    "android": { "adaptiveIcon": { "backgroundColor": "#1a1a2e" } },
+    "platforms": ["ios", "android", "web"],
+    "plugins": ["expo-router"],
+    "web": { "bundler": "metro", "output": "single" },
+    "experiments": { "typedRoutes": true }
+  }
+}

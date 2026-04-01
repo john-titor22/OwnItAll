@@ -1,11 +1,18 @@
 import {
-  ref, set, get, update, push, onValue, off,
+  ref, set, get, update, onValue, off,
 } from 'firebase/database';
 import { db } from './config';
 import { GameState, Player, PropertyState } from '../game/types';
 import { BOARD, STARTING_MONEY, PLAYER_COLORS } from '../game/boardData';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
+
+function generateCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I to avoid confusion
+  return Array.from({ length: 5 }, () =>
+    chars[Math.floor(Math.random() * chars.length)]
+  ).join('');
+}
 
 function buildInitialProperties(): Record<string, PropertyState> {
   const props: Record<string, PropertyState> = {};
@@ -37,9 +44,8 @@ export async function createGame(
   hostId: string,
   hostName: string
 ): Promise<string> {
-  const gamesRef = ref(db, 'games');
-  const newRef   = push(gamesRef);
-  const gameId   = newRef.key!;
+  const gameId = generateCode();
+  const newRef = ref(db, `games/${gameId}`);
 
   const host = makePlayer(hostId, hostName, 0);
 

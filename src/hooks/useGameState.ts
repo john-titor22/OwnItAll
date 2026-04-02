@@ -55,7 +55,8 @@ export function useGameState(gameId: string, playerId: string) {
             [`players/${playerId}/jailTurns`]: player.jailTurns,
             [`players/${playerId}/money`]:     player.money,
             log,
-            phase: 'end_turn',
+            phase:         'end_turn',
+            turnStartedAt: Date.now(),
           });
           return;
         }
@@ -133,8 +134,9 @@ export function useGameState(gameId: string, playerId: string) {
       }
     }
 
-    patch['log']   = log;
-    patch['phase'] = nextPhase;
+    patch['log']          = log;
+    patch['phase']        = nextPhase;
+    patch['turnStartedAt'] = Date.now();
 
     await patchGame(gameId, patch);
   }, [gameState, isMyTurn, playerId, gameId]);

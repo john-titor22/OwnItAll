@@ -39,16 +39,25 @@ function BounceToken({ color, initial }: { color: string; initial: string }) {
 }
 
 // ── Single tile ────────────────────────────────────────────────────────────
-interface TileCellProps { id: number; gs: GameState; onPress: () => void; isVert?: boolean; }
+type Side = 'top' | 'bottom' | 'left' | 'right';
+interface TileCellProps { id: number; gs: GameState; onPress: () => void; side?: Side; }
 
-function TileCell({ id, gs, onPress, isVert = false }: TileCellProps) {
+function TileCell({ id, gs, onPress, side = 'bottom' }: TileCellProps) {
   const tile       = BOARD[id];
   const isCorner   = CORNER_SET.has(id);
+  const isVert     = side === 'left' || side === 'right';
   const prop       = gs.properties[String(id)];
   const owner      = prop?.ownerId ? gs.players[prop.ownerId] : null;
   const here       = Object.values(gs.players).filter(p => p.position === id);
   const groupColor = tile.group ? GROUP_COLORS[tile.group] : null;
   const bgUri      = tileBgUri(tile.id, tile.type, tile.name);
+
+  // Color bar hugs the OUTER edge of the board on each side
+  const barStyle =
+    side === 'top'    ? s.barTop    :
+    side === 'bottom' ? s.barBottom :
+    side === 'left'   ? s.barLeft   :
+                        s.barRight;
 
   return (
     <TouchableOpacity
@@ -64,13 +73,9 @@ function TileCell({ id, gs, onPress, isVert = false }: TileCellProps) {
       {/* Dark vignette so UI elements are readable */}
       <View style={[s.vignette, isCorner && s.vignetteCorner]} />
 
-      {/* Group colour bar */}
+      {/* Group colour bar — always on the outer edge */}
       {groupColor && (
-        <View style={[
-          s.colorBar,
-          isVert ? s.colorBarVert : s.colorBarTop,
-          { backgroundColor: groupColor },
-        ]} />
+        <View style={[barStyle, { backgroundColor: groupColor }]} />
       )}
 
       {/* Corner label */}
@@ -123,12 +128,12 @@ export function BoardView({ gameState }: Props) {
         <View style={s.board}>
 
           <View style={s.hRow}>
-            {TOP.map(id => <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} />)}
+            {TOP.map(id => <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} side="top" />)}
           </View>
 
           <View style={s.middle}>
             <View style={s.vCol}>
-              {LEFT_COL.map(id => <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} isVert />)}
+              {LEFT_COL.map(id => <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} side="left" />)}
             </View>
 
             <View style={s.center}>
@@ -139,12 +144,12 @@ export function BoardView({ gameState }: Props) {
             </View>
 
             <View style={s.vCol}>
-              {RIGHT_COL.map(id => <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} isVert />)}
+              {RIGHT_COL.map(id => <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} side="right" />)}
             </View>
           </View>
 
           <View style={s.hRow}>
-            {BOTTOM.map(id => <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} />)}
+            {BOTTOM.map(id => <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} side="bottom" />)}
           </View>
 
         </View>
@@ -316,10 +321,11 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.52)',
   },
 
-  // Group colour bars
-  colorBarTop:  { position: 'absolute', top: 0, left: 0, right: 0, height: 8 },
-  colorBarVert: { position: 'absolute', top: 0, left: 0, bottom: 0, width: 7 },
-  colorBar:     {},
+  // Group colour bars — each hugs the OUTER edge of the board
+  barTop:    { position: 'absolute', top:    0, left: 0, right:  0, height: 8 },
+  barBottom: { position: 'absolute', bottom: 0, left: 0, right:  0, height: 8 },
+  barLeft:   { position: 'absolute', top:    0, left: 0, bottom: 0, width:  7 },
+  barRight:  { position: 'absolute', top:    0, right:0, bottom: 0, width:  7 },
 
   cornerName: {
     color: '#FFE899',

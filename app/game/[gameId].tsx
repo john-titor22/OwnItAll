@@ -10,6 +10,7 @@ import { GameLog }            from '../../src/components/GameLog';
 import { DiceRollOverlay }    from '../../src/components/DiceRollOverlay';
 import { PurchaseModal }      from '../../src/components/PurchaseModal';
 import { FloatingText, useFloatingTransactions, PlayerLayout } from '../../src/components/FloatingText';
+import { TurnTimer } from '../../src/components/TurnTimer';
 import { PALETTE, GROUP_COLORS } from '../../src/game/boardData';
 
 export default function GameScreen() {
@@ -42,6 +43,16 @@ export default function GameScreen() {
       { text: 'Back to Home', onPress: () => router.replace('/') },
     ]);
   }, [gameState?.status]);
+
+  // Auto-action when turn timer expires (only fires for the active player)
+  function handleTimerExpire() {
+    if (!isMyTurn || !gameState) return;
+    if (gameState.phase === 'roll') {
+      handleRollDice();
+    } else {
+      handleEndTurn();
+    }
+  }
 
   if (loading || !gameState || !user) {
     return <View style={s.center}><Text style={s.dim}>Loading…</Text></View>;
@@ -129,6 +140,14 @@ export default function GameScreen() {
 
       {/* ── Footer ── */}
       <View style={s.footer}>
+
+        {/* Turn countdown bar — visible to all, auto-acts for the active player */}
+        {gameState.status === 'playing' && (
+          <TurnTimer
+            turnStartedAt={gameState.turnStartedAt}
+            onExpire={handleTimerExpire}
+          />
+        )}
 
         {myPlayer && currentTile && (
           <View style={[

@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   Alert, KeyboardAvoidingView, Platform, Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '../src/hooks/useAuth';
-import { createGame, joinGame } from '../src/firebase/gameService';
+import { createGame, joinGame, deleteStaleLobbies } from '../src/firebase/gameService';
 import { PALETTE } from '../src/game/boardData';
 
 export default function HomeScreen() {
@@ -13,6 +13,8 @@ export default function HomeScreen() {
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => { deleteStaleLobbies().catch(() => {}); }, []);
 
   if (loading) {
     return <View style={styles.center}><Text style={styles.dim}>Loading…</Text></View>;

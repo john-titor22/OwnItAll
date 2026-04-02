@@ -1,5 +1,5 @@
 import {
-  ref, set, get, update, onValue, off,
+  ref, set, get, update, remove, onValue, off, query, orderByChild, equalTo,
 } from 'firebase/database';
 import { db } from './config';
 import { GameState, Player, PropertyState } from '../game/types';
@@ -60,6 +60,8 @@ export async function createGame(
     diceResult:         null,
     phase:              'roll',
     createdBy:          hostId,
+    createdAt:          Date.now(),
+    turnStartedAt:      Date.now(),
   };
 
   await set(newRef, state);
@@ -92,7 +94,7 @@ export async function joinGame(
 }
 
 export async function startGame(gameId: string): Promise<void> {
-  await update(ref(db, `games/${gameId}`), { status: 'playing' });
+  await update(ref(db, `games/${gameId}`), { status: 'playing', turnStartedAt: Date.now() });
 }
 
 /**
@@ -105,6 +107,24 @@ export async function patchGame(
   patches: Record<string, unknown>
 ): Promise<void> {
   await update(ref(db, `games/${gameId}`), patches);
+}
+
+export async function deleteStaleLobbies(): Promise<void> {
+  const gamesRef  = ref(db, 'games');
+  const snapshot  = await get(query(gamesRef, orderByChild('status'), equalTo('waiting')));
+  if (!snapshot.exists()) return;
+
+  const cutoff = Date.now() - 15 * 60 * 1000; // 15 minutes
+  const deletions: Promise<void>[] = [];
+
+  snapshot.forEach((child) => {
+    const game = child.val() as { createdAt?: number };
+    if (game.createdAt !== undefined && game.createdAt < cutoff) {
+      deletions.push(remove(ref(db, `games/${child.key}`)));
+    }
+  });
+
+  await Promise.all(deletions);
 }
 
 export function subscribeToGame(

@@ -62,4 +62,6 @@ export interface GameState {
   phase: GamePhase;
   winnerId?: string;
   createdBy: string;
+  createdAt?: number;      // ms timestamp — used for lobby auto-close
+  turnStartedAt?: number;  // ms timestamp — resets on each turn change
 }

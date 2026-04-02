@@ -192,6 +192,7 @@ export function useGameState(gameId: string, playerId: string) {
       currentPlayerIndex: nextIndex,
       diceResult:         null,
       phase:              'roll',
+      turnStartedAt:      Date.now(),
     });
   }, [gameState, isMyTurn, gameId]);
 

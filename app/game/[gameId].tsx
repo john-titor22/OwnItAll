@@ -179,10 +179,8 @@ const s = StyleSheet.create({
   boardArea: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 6,
+    justifyContent: 'center',
     backgroundColor: PALETTE.bg,
-    overflow: 'hidden',
   },
 
   // ── Footer ──

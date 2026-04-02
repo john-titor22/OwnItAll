@@ -143,13 +143,13 @@ const s = StyleSheet.create({
 
   // ── Header ──
   header: {
-    paddingTop: Platform.OS === 'ios' ? 52 : 28,
+    paddingTop: Platform.OS === 'ios' ? 50 : 24,
     paddingHorizontal: 10,
-    paddingBottom: 8,
+    paddingBottom: 6,
     backgroundColor: PALETTE.surface,
     borderBottomWidth: 1,
     borderBottomColor: '#1E1E3A',
-    gap: 6,
+    gap: 5,
   },
   chips: {
     flexDirection: 'row',
@@ -179,8 +179,10 @@ const s = StyleSheet.create({
   boardArea: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 6,
     backgroundColor: PALETTE.bg,
+    overflow: 'hidden',
   },
 
   // ── Footer ──

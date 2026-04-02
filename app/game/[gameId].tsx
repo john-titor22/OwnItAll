@@ -1,12 +1,12 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Alert, Platform } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { useAuth }          from '../../src/hooks/useAuth';
-import { useGameState }     from '../../src/hooks/useGameState';
-import { BoardView }        from '../../src/components/BoardView';
-import { GameControls }     from '../../src/components/GameControls';
-import { GameLog }          from '../../src/components/GameLog';
-import { DiceRollOverlay }  from '../../src/components/DiceRollOverlay';
+import { useAuth }         from '../../src/hooks/useAuth';
+import { useGameState }    from '../../src/hooks/useGameState';
+import { BoardView }       from '../../src/components/BoardView';
+import { GameControls }    from '../../src/components/GameControls';
+import { GameLog }         from '../../src/components/GameLog';
+import { DiceRollOverlay } from '../../src/components/DiceRollOverlay';
 import { PALETTE, GROUP_COLORS } from '../../src/game/boardData';
 
 export default function GameScreen() {
@@ -25,96 +25,148 @@ export default function GameScreen() {
     const winner = gameState.winnerId
       ? gameState.players[gameState.winnerId]?.name ?? 'Unknown'
       : 'Unknown';
-    Alert.alert('🏆 Game Over!', `${winner} wins Marrakech!`, [
-      { text: 'Home', onPress: () => router.replace('/') },
+    Alert.alert('Game Over!', `${winner} wins Marrakech!`, [
+      { text: 'Back to Home', onPress: () => router.replace('/') },
     ]);
   }, [gameState?.status]);
 
   if (loading || !gameState || !user) {
-    return <View style={s.center}><Text style={s.dim}>Loading game…</Text></View>;
+    return (
+      <View style={s.center}>
+        <Text style={s.dim}>Loading game…</Text>
+      </View>
+    );
   }
 
-  const currentPlayer = gameState.players[gameState.playerOrder[gameState.currentPlayerIndex]];
+  const currentIdx    = gameState.currentPlayerIndex;
+  const currentPlayer = gameState.players[gameState.playerOrder[currentIdx]];
   const accentColor   = currentPlayer?.color ?? PALETTE.goldLight;
   const prop          = myPlayer ? gameState.properties[String(myPlayer.position)] : null;
   const tileOwner     = prop?.ownerId ? gameState.players[prop.ownerId] : null;
 
+  const turnLabel = isMyTurn
+    ? gameState.phase === 'roll'   ? 'Your Turn — Roll!'
+    : gameState.phase === 'action' ? 'Your Turn — Act'
+    :                                'Your Turn — End'
+    : `${currentPlayer?.name ?? '…'}'s Turn`;
+
   return (
     <View style={s.root}>
 
-      {/* ── Compact header: player chips + turn state ── */}
+      {/* ── Decorative background circles (Moroccan geometry) ── */}
+      <View style={s.bgCircle1} />
+      <View style={s.bgCircle2} />
+
+      {/* ══════════════════════════════════════════
+          HEADER — player avatar cards
+      ══════════════════════════════════════════ */}
       <View style={s.header}>
 
-        <View style={s.chips}>
+        {/* Player cards */}
+        <View style={s.playerRow}>
           {gameState.playerOrder.map(pid => {
             const p        = gameState.players[pid];
-            const isActive = pid === gameState.playerOrder[gameState.currentPlayerIndex];
+            const isActive = pid === gameState.playerOrder[currentIdx];
+            const isMe     = pid === uid;
             if (!p) return null;
             return (
-              <View key={pid} style={[s.chip, isActive && { borderColor: p.color }]}>
-                <View style={[s.chipDot, { backgroundColor: p.color }]} />
-                <View>
-                  <Text style={s.chipName} numberOfLines={1}>
-                    {p.name}{pid === uid ? ' ✦' : ''}
+              <View
+                key={pid}
+                style={[
+                  s.playerCard,
+                  isActive && {
+                    borderColor: p.color,
+                    shadowColor: p.color,
+                    shadowOpacity: 0.7,
+                    shadowRadius: 8,
+                    elevation: 8,
+                  },
+                ]}
+              >
+                {/* Avatar circle */}
+                <View style={[s.avatar, { backgroundColor: p.color }]}>
+                  <Text style={s.avatarLetter}>{p.name[0].toUpperCase()}</Text>
+                </View>
+
+                {/* Info */}
+                <View style={s.playerInfo}>
+                  <Text style={s.playerName} numberOfLines={1}>
+                    {p.name}{isMe ? ' ✦' : ''}
                   </Text>
-                  <Text style={[s.chipMoney, p.isBankrupt && { color: PALETTE.terra }]}>
+                  <Text
+                    style={[
+                      s.playerMoney,
+                      p.isBankrupt && { color: PALETTE.terra },
+                    ]}
+                  >
                     {p.isBankrupt ? 'OUT' : `${p.money}M`}
                   </Text>
                 </View>
+
+                {/* Active indicator dot */}
+                {isActive && <View style={[s.activeDot, { backgroundColor: p.color }]} />}
               </View>
             );
           })}
         </View>
 
-        <View style={[s.turnBar, { borderLeftColor: accentColor }]}>
-          <Text style={[s.turnName, { color: accentColor }]} numberOfLines={1}>
-            {isMyTurn ? 'Your Turn' : `${currentPlayer?.name ?? '…'}'s Turn`}
-          </Text>
-          <Text style={s.turnSub} numberOfLines={1}>
-            {isMyTurn
-              ? gameState.phase === 'roll'   ? 'Roll the dice'
-              : gameState.phase === 'action' ? 'Choose an action'
-              :                                'End your turn'
-              : 'Waiting for other player…'}
+        {/* Turn pill */}
+        <View style={[s.turnPill, { backgroundColor: accentColor + '22', borderColor: accentColor + '66' }]}>
+          <View style={[s.turnPillDot, { backgroundColor: accentColor }]} />
+          <Text style={[s.turnPillText, { color: accentColor }]} numberOfLines={1}>
+            {turnLabel}
           </Text>
         </View>
 
       </View>
 
-      {/* ── Board — fills all remaining space ── */}
+      {/* ══════════════════════════════════════════
+          BOARD
+      ══════════════════════════════════════════ */}
       <View style={s.boardArea}>
         <BoardView gameState={gameState} />
       </View>
 
-      {/* ── Footer: tile strip + log + controls ── */}
+      {/* ══════════════════════════════════════════
+          FOOTER — tile info + log + controls
+      ══════════════════════════════════════════ */}
       <View style={s.footer}>
 
+        {/* Current tile card */}
         {myPlayer && currentTile && (
           <View style={[
-            s.tileStrip,
-            currentTile.group
-              ? { borderLeftColor: GROUP_COLORS[currentTile.group] }
-              : {},
+            s.tileCard,
+            currentTile.group && { borderLeftColor: GROUP_COLORS[currentTile.group] },
           ]}>
-            <Text style={s.tileName} numberOfLines={1}>{currentTile.name}</Text>
-            {tileOwner && tileOwner.id !== uid && (
-              <Text style={s.tileRent} numberOfLines={1}>
-                Owned by {tileOwner.name} · lvl {prop!.level}
-              </Text>
-            )}
-            {prop?.ownerId === uid && (
-              <Text style={s.tileOwned} numberOfLines={1}>
-                Your property · lvl {prop.level}
-              </Text>
-            )}
-            {!prop?.ownerId && currentTile.price && (
-              <Text style={s.tilePrice} numberOfLines={1}>{currentTile.price} MAD</Text>
-            )}
+            <View style={s.tileCardLeft}>
+              <Text style={s.tileName} numberOfLines={1}>{currentTile.name}</Text>
+              {tileOwner && tileOwner.id !== uid && (
+                <Text style={s.tileStatus}>
+                  Owned by {tileOwner.name} · Riad lvl {prop!.level}
+                </Text>
+              )}
+              {prop?.ownerId === uid && (
+                <Text style={[s.tileStatus, { color: PALETTE.teal }]}>
+                  Your property · Riad lvl {prop.level}
+                </Text>
+              )}
+              {!prop?.ownerId && currentTile.price && (
+                <Text style={[s.tileStatus, { color: PALETTE.muted }]}>For sale</Text>
+              )}
+            </View>
+            {!prop?.ownerId && currentTile.price ? (
+              <View style={s.priceBadge}>
+                <Text style={s.priceText}>{currentTile.price}</Text>
+                <Text style={s.priceCur}>MAD</Text>
+              </View>
+            ) : null}
           </View>
         )}
 
+        {/* Log */}
         <GameLog log={gameState.log} />
 
+        {/* Action buttons */}
         {isMyTurn && (
           <GameControls
             phase={gameState.phase}
@@ -136,44 +188,92 @@ export default function GameScreen() {
   );
 }
 
+// ── Styles ────────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: PALETTE.bg, maxWidth: 480, alignSelf: 'center', width: '100%' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: PALETTE.bg },
-  dim:    { color: PALETTE.muted },
+  root: {
+    flex: 1,
+    backgroundColor: PALETTE.bg,
+    maxWidth: 480,
+    alignSelf: 'center',
+    width: '100%',
+    overflow: 'hidden',
+  },
+  center: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: PALETTE.bg,
+  },
+  dim: { color: PALETTE.muted },
+
+  // Background decorations
+  bgCircle1: {
+    position: 'absolute',
+    width: 300, height: 300, borderRadius: 150,
+    backgroundColor: PALETTE.goldLight,
+    opacity: 0.025,
+    top: -100, right: -80,
+  },
+  bgCircle2: {
+    position: 'absolute',
+    width: 220, height: 220, borderRadius: 110,
+    backgroundColor: '#5BB8D4',
+    opacity: 0.03,
+    bottom: 80, left: -60,
+  },
 
   // ── Header ──
   header: {
-    paddingTop: Platform.OS === 'ios' ? 50 : 24,
-    paddingHorizontal: 10,
-    paddingBottom: 6,
-    backgroundColor: PALETTE.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E1E3A',
-    gap: 5,
+    paddingTop: Platform.OS === 'ios' ? 52 : 26,
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+    gap: 8,
   },
-  chips: {
+
+  playerRow: {
     flexDirection: 'row',
-    gap: 5,
+    gap: 8,
     flexWrap: 'wrap',
   },
-  chip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: '#12122A',
-    borderRadius: 8,
-    paddingHorizontal: 8, paddingVertical: 4,
-    borderWidth: 1.5, borderColor: 'transparent',
+  playerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#13132B',
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 0,
   },
-  chipDot:   { width: 8, height: 8, borderRadius: 4 },
-  chipName:  { color: PALETTE.text,  fontSize: 11, fontWeight: '700' },
-  chipMoney: { color: '#2ECC71',     fontSize: 10, fontWeight: '600' },
+  avatar: {
+    width: 34, height: 34, borderRadius: 17,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 4, elevation: 3,
+  },
+  avatarLetter: { color: '#fff', fontSize: 15, fontWeight: '900' },
+  playerInfo:   { gap: 1 },
+  playerName:   { color: PALETTE.text, fontSize: 12, fontWeight: '800' },
+  playerMoney:  { color: '#2ECC71', fontSize: 11, fontWeight: '700' },
+  activeDot: {
+    width: 7, height: 7, borderRadius: 4,
+    marginLeft: 2,
+    shadowOpacity: 0.9, shadowRadius: 4,
+  },
 
-  turnBar: {
-    borderLeftWidth: 3,
-    paddingLeft: 10,
-    paddingVertical: 1,
+  turnPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
   },
-  turnName: { fontSize: 13, fontWeight: '800' },
-  turnSub:  { color: PALETTE.muted, fontSize: 10, marginTop: 1 },
+  turnPillDot:  { width: 7, height: 7, borderRadius: 4 },
+  turnPillText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.3 },
 
   // ── Board area ──
   boardArea: {
@@ -181,29 +281,40 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingTop: 4,
-    backgroundColor: PALETTE.bg,
   },
 
   // ── Footer ──
   footer: {
-    backgroundColor: PALETTE.surface,
+    backgroundColor: '#0E0E22',
     borderTopWidth: 1,
-    borderTopColor: '#1E1E3A',
-    paddingBottom: Platform.OS === 'ios' ? 20 : 6,
+    borderTopColor: '#1A1A36',
+    paddingBottom: Platform.OS === 'ios' ? 22 : 8,
   },
-  tileStrip: {
+
+  tileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#1A1A32',
-    borderLeftWidth: 3,
-    borderLeftColor: 'transparent',
+    borderBottomColor: '#1A1A36',
+    borderLeftWidth: 4,
+    borderLeftColor: PALETTE.muted,
+    gap: 10,
   },
-  tileName:  { color: PALETTE.text,      fontSize: 13, fontWeight: '800', flex: 1 },
-  tileRent:  { color: PALETTE.terra,     fontSize: 11 },
-  tileOwned: { color: PALETTE.teal,      fontSize: 11 },
-  tilePrice: { color: PALETTE.goldLight, fontSize: 11 },
+  tileCardLeft: { flex: 1, gap: 2 },
+  tileName:  { color: PALETTE.text, fontSize: 14, fontWeight: '900' },
+  tileStatus:{ color: PALETTE.terra, fontSize: 11, fontWeight: '600' },
+
+  priceBadge: {
+    backgroundColor: PALETTE.goldLight + '22',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: PALETTE.goldLight + '55',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    alignItems: 'center',
+  },
+  priceText: { color: PALETTE.goldLight, fontSize: 16, fontWeight: '900' },
+  priceCur:  { color: PALETTE.goldLight, fontSize: 9,  fontWeight: '600', opacity: 0.8 },
 });

@@ -52,12 +52,11 @@ function TileCell({ id, gs, onPress, side = 'bottom' }: TileCellProps) {
   const groupColor = tile.group ? GROUP_COLORS[tile.group] : null;
   const bgUri      = tileBgUri(tile.id, tile.type, tile.name);
 
-  // Color bar hugs the OUTER edge of the board on each side
+  // Color bar faces the board interior on every side
   const barStyle =
     side === 'top'    ? s.barTop    :
     side === 'bottom' ? s.barBottom :
-    side === 'left'   ? s.barLeft   :
-                        s.barRight;
+                        s.barLeft;   // left AND right columns: bar on left (interior)
 
   return (
     <TouchableOpacity

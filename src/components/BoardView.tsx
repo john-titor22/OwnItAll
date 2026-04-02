@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, Image, TouchableOpacity, Modal, ScrollView,
+  View, Text, StyleSheet, Image, TouchableOpacity, Modal, ScrollView, Animated,
 } from 'react-native';
 import { GameState } from '../game/types';
 import { BOARD, GROUP_COLORS, PALETTE, TILE_ICONS, tileImage } from '../game/boardData';
@@ -21,6 +21,19 @@ const TOP       = [21, 20, 19, 18, 17, 16, 15, 14];
 const LEFT_COL  = [22, 23, 24, 25, 26, 27];
 
 const CORNER_SET = new Set([0, 7, 14, 21]);
+
+// ── Bounce token ────────────────────────────────────────────────────────────
+function BounceToken({ color, initial }: { color: string; initial: string }) {
+  const scale = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(scale, { toValue: 1, friction: 4, tension: 200, useNativeDriver: true }).start();
+  }, []);
+  return (
+    <Animated.View style={[styles.token, { backgroundColor: color, transform: [{ scale }] }]}>
+      <Text style={styles.tokenTxt}>{initial}</Text>
+    </Animated.View>
+  );
+}
 
 // ── Single tile ─────────────────────────────────────────────────────────────
 interface TileCellProps {
@@ -95,9 +108,7 @@ function TileCell({ id, gs, onPress, isVert = false }: TileCellProps) {
       {here.length > 0 && (
         <View style={styles.tokens}>
           {here.map((p, i) => (
-            <View key={i} style={[styles.token, { backgroundColor: p.color }]}>
-              <Text style={styles.tokenTxt}>{p.name[0].toUpperCase()}</Text>
-            </View>
+            <BounceToken key={p.id} color={p.color} initial={p.name[0].toUpperCase()} />
           ))}
         </View>
       )}

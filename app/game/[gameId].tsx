@@ -5,7 +5,7 @@ import { useAuth }        from '../../src/hooks/useAuth';
 import { useGameState }   from '../../src/hooks/useGameState';
 import { BoardView }      from '../../src/components/BoardView';
 import { PlayerList }     from '../../src/components/PlayerList';
-import { Dice }           from '../../src/components/Dice';
+import { DiceRollOverlay } from '../../src/components/DiceRollOverlay';
 import { GameControls }   from '../../src/components/GameControls';
 import { GameLog }        from '../../src/components/GameLog';
 import { PALETTE, GROUP_COLORS } from '../../src/game/boardData';
@@ -90,9 +90,10 @@ export default function GameScreen() {
           </View>
         )}
 
-        {gameState.diceResult && <Dice values={gameState.diceResult} />}
         <GameLog log={gameState.log} />
       </ScrollView>
+
+      <DiceRollOverlay diceResult={gameState.diceResult} />
 
       {isMyTurn && (
         <GameControls

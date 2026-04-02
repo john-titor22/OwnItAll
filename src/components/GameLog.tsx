@@ -6,7 +6,7 @@ interface Props { log: string[]; }
 
 export function GameLog({ log }: Props) {
   const entries = [...(Array.isArray(log) ? log : Object.values(log))]
-    .reverse().slice(0, 8);
+    .reverse().slice(0, 3);
 
   return (
     <View style={styles.container}>

@@ -81,13 +81,11 @@ function Btn({ label, style, textStyle, onPress }: {
 
 const styles = StyleSheet.create({
   bar: {
-    backgroundColor: PALETTE.surface,
-    paddingHorizontal: 12, paddingVertical: 12, paddingBottom: 28,
-    borderTopWidth: 1, borderTopColor: '#1E1E3A',
+    paddingHorizontal: 12, paddingVertical: 8,
   },
   row: { flexDirection: 'row', gap: 8, justifyContent: 'center', flexWrap: 'wrap' },
-  btn: { paddingVertical: 14, paddingHorizontal: 20, borderRadius: 12, alignItems: 'center', minWidth: 120 },
-  btnBase: { fontSize: 14, fontWeight: '800', letterSpacing: 0.5 },
+  btn: { paddingVertical: 11, paddingHorizontal: 18, borderRadius: 10, alignItems: 'center', minWidth: 110 },
+  btnBase: { fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
 
   gold:      { backgroundColor: PALETTE.goldLight },
   teal:      { backgroundColor: PALETTE.teal },

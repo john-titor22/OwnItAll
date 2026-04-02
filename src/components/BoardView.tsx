@@ -1,14 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, Image, TouchableOpacity, Modal, ScrollView, Animated,
+  View, Text, StyleSheet, Image, TouchableOpacity, Modal, ScrollView, Animated, Dimensions,
 } from 'react-native';
 import { GameState } from '../game/types';
 import { BOARD, GROUP_COLORS, PALETTE, TILE_ICONS, tileImage } from '../game/boardData';
 
-// ── Board geometry ──────────────────────────────────────────────────────────
-const BS = 324;                            // board square (px)
-const C  = 54;                             // corner tile size
-const S  = Math.floor((BS - C * 2) / 6);  // = 36 — side tile narrow dimension
+// ── Board geometry — fills screen width ─────────────────────────────────────
+const SW = Dimensions.get('window').width;
+const BS = Math.min(SW - 12, 400);                // board square (px)
+const C  = Math.round(BS * (54 / 324));           // corner tile size
+const S  = Math.floor((BS - C * 2) / 6);         // side tile narrow dimension
 
 // Perimeter tile order for each side
 // Bottom row L→R   (corners: 0=BL, 7=BR)
@@ -251,8 +252,6 @@ export function BoardView({ gameState }: Props) {
 const styles = StyleSheet.create({
   scene: {
     alignItems: 'center',
-    paddingTop: 24,
-    paddingBottom: 8,
   },
 
   // Walnut table surface behind the board

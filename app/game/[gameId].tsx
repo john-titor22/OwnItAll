@@ -1,19 +1,18 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, Alert, Platform } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { useAuth }        from '../../src/hooks/useAuth';
-import { useGameState }   from '../../src/hooks/useGameState';
-import { BoardView }      from '../../src/components/BoardView';
-import { PlayerList }     from '../../src/components/PlayerList';
-import { DiceRollOverlay } from '../../src/components/DiceRollOverlay';
-import { GameControls }   from '../../src/components/GameControls';
-import { GameLog }        from '../../src/components/GameLog';
+import { useAuth }          from '../../src/hooks/useAuth';
+import { useGameState }     from '../../src/hooks/useGameState';
+import { BoardView }        from '../../src/components/BoardView';
+import { GameControls }     from '../../src/components/GameControls';
+import { GameLog }          from '../../src/components/GameLog';
+import { DiceRollOverlay }  from '../../src/components/DiceRollOverlay';
 import { PALETTE, GROUP_COLORS } from '../../src/game/boardData';
 
 export default function GameScreen() {
-  const { gameId }  = useLocalSearchParams<{ gameId: string }>();
-  const { user }    = useAuth();
-  const uid         = user?.uid ?? '';
+  const { gameId } = useLocalSearchParams<{ gameId: string }>();
+  const { user }   = useAuth();
+  const uid        = user?.uid ?? '';
 
   const {
     gameState, loading, isMyTurn, myPlayer, currentTile,
@@ -32,116 +31,178 @@ export default function GameScreen() {
   }, [gameState?.status]);
 
   if (loading || !gameState || !user) {
-    return <View style={styles.center}><Text style={styles.dim}>Loading game…</Text></View>;
+    return <View style={s.center}><Text style={s.dim}>Loading game…</Text></View>;
   }
 
   const currentPlayer = gameState.players[gameState.playerOrder[gameState.currentPlayerIndex]];
   const accentColor   = currentPlayer?.color ?? PALETTE.goldLight;
+  const prop          = myPlayer ? gameState.properties[String(myPlayer.position)] : null;
+  const tileOwner     = prop?.ownerId ? gameState.players[prop.ownerId] : null;
 
   return (
-    <View style={styles.root}>
+    <View style={s.root}>
 
-      {/* ── Turn banner ── */}
-      <View style={[styles.banner, { borderBottomColor: accentColor + '33' }]}>
-        <View style={[styles.dot, { backgroundColor: accentColor }]} />
-        <View style={styles.bannerInfo}>
-          <Text style={styles.bannerName}>
-            {isMyTurn ? 'Your Turn' : `${currentPlayer.name}'s Turn`}
+      {/* ── Compact header: player chips + turn state ── */}
+      <View style={s.header}>
+
+        <View style={s.chips}>
+          {gameState.playerOrder.map(pid => {
+            const p        = gameState.players[pid];
+            const isActive = pid === gameState.playerOrder[gameState.currentPlayerIndex];
+            if (!p) return null;
+            return (
+              <View key={pid} style={[s.chip, isActive && { borderColor: p.color }]}>
+                <View style={[s.chipDot, { backgroundColor: p.color }]} />
+                <View>
+                  <Text style={s.chipName} numberOfLines={1}>
+                    {p.name}{pid === uid ? ' ✦' : ''}
+                  </Text>
+                  <Text style={[s.chipMoney, p.isBankrupt && { color: PALETTE.terra }]}>
+                    {p.isBankrupt ? 'OUT' : `${p.money}M`}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+
+        <View style={[s.turnBar, { borderLeftColor: accentColor }]}>
+          <Text style={[s.turnName, { color: accentColor }]} numberOfLines={1}>
+            {isMyTurn ? 'Your Turn' : `${currentPlayer?.name ?? '…'}'s Turn`}
           </Text>
-          <Text style={styles.bannerSub}>
+          <Text style={s.turnSub} numberOfLines={1}>
             {isMyTurn
-              ? gameState.phase === 'roll'     ? 'Roll the dice to move'
-              : gameState.phase === 'action'   ? 'Choose an action'
-              :                                  'End your turn'
+              ? gameState.phase === 'roll'   ? 'Roll the dice'
+              : gameState.phase === 'action' ? 'Choose an action'
+              :                                'End your turn'
               : 'Waiting for other player…'}
           </Text>
         </View>
-        {isMyTurn && (
-          <View style={[styles.turnBadge, { backgroundColor: accentColor + '22', borderColor: accentColor + '55' }]}>
-            <Text style={[styles.turnBadgeTxt, { color: accentColor }]}>YOUR TURN</Text>
-          </View>
-        )}
+
       </View>
 
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-
+      {/* ── Board — fills all remaining space ── */}
+      <View style={s.boardArea}>
         <BoardView gameState={gameState} />
-        <PlayerList gameState={gameState} myId={uid} />
+      </View>
 
-        {/* ── Current tile card ── */}
+      {/* ── Footer: tile strip + log + controls ── */}
+      <View style={s.footer}>
+
         {myPlayer && currentTile && (
-          <View style={[styles.tileCard, currentTile.group && { borderLeftColor: GROUP_COLORS[currentTile.group], borderLeftWidth: 4 }]}>
-            <Text style={styles.tileCardLabel}>You are on</Text>
-            <Text style={styles.tileCardName}>{currentTile.name}</Text>
-            {currentTile.price ? (
-              <Text style={styles.tileCardPrice}>Price: {currentTile.price} MAD</Text>
-            ) : null}
-            {(() => {
-              const prop = gameState.properties[String(myPlayer.position)];
-              if (prop?.ownerId && prop.ownerId !== uid) {
-                const owner = gameState.players[prop.ownerId];
-                return <Text style={styles.rentWarn}>Owned by {owner?.name}  •  Riad lvl {prop.level}</Text>;
-              }
-              if (prop?.ownerId === uid) {
-                return <Text style={styles.ownedGood}>Your property  •  Riad lvl {prop.level}</Text>;
-              }
-              return null;
-            })()}
+          <View style={[
+            s.tileStrip,
+            currentTile.group
+              ? { borderLeftColor: GROUP_COLORS[currentTile.group] }
+              : {},
+          ]}>
+            <Text style={s.tileName} numberOfLines={1}>{currentTile.name}</Text>
+            {tileOwner && tileOwner.id !== uid && (
+              <Text style={s.tileRent} numberOfLines={1}>
+                Owned by {tileOwner.name} · lvl {prop!.level}
+              </Text>
+            )}
+            {prop?.ownerId === uid && (
+              <Text style={s.tileOwned} numberOfLines={1}>
+                Your property · lvl {prop.level}
+              </Text>
+            )}
+            {!prop?.ownerId && currentTile.price && (
+              <Text style={s.tilePrice} numberOfLines={1}>{currentTile.price} MAD</Text>
+            )}
           </View>
         )}
 
         <GameLog log={gameState.log} />
-      </ScrollView>
+
+        {isMyTurn && (
+          <GameControls
+            phase={gameState.phase}
+            canBuy={canBuy}
+            upgradableTiles={upgradableTiles}
+            gameState={gameState}
+            myId={uid}
+            onRoll={handleRollDice}
+            onBuy={handleBuyProperty}
+            onEndTurn={handleEndTurn}
+            onUpgrade={handleUpgrade}
+          />
+        )}
+
+      </View>
 
       <DiceRollOverlay diceResult={gameState.diceResult} />
-
-      {isMyTurn && (
-        <GameControls
-          phase={gameState.phase}
-          canBuy={canBuy}
-          upgradableTiles={upgradableTiles}
-          gameState={gameState}
-          myId={uid}
-          onRoll={handleRollDice}
-          onBuy={handleBuyProperty}
-          onEndTurn={handleEndTurn}
-          onUpgrade={handleUpgrade}
-        />
-      )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   root:   { flex: 1, backgroundColor: PALETTE.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: PALETTE.bg },
   dim:    { color: PALETTE.muted },
-  scroll: { flex: 1 },
 
-  banner: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingTop: 52, paddingBottom: 14,
-    gap: 12, borderBottomWidth: 1,
-  },
-  dot:        { width: 12, height: 12, borderRadius: 6 },
-  bannerInfo: { flex: 1 },
-  bannerName: { color: PALETTE.text, fontSize: 17, fontWeight: '800' },
-  bannerSub:  { color: PALETTE.muted, fontSize: 11, marginTop: 1 },
-  turnBadge: {
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 8, borderWidth: 1,
-  },
-  turnBadgeTxt: { fontSize: 9, fontWeight: '800', letterSpacing: 1.5 },
-
-  tileCard: {
+  // ── Header ──
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 52 : 28,
+    paddingHorizontal: 10,
+    paddingBottom: 8,
     backgroundColor: PALETTE.surface,
-    margin: 10, padding: 14, borderRadius: 12,
-    borderWidth: 1, borderColor: '#2A2A4A',
-    borderLeftColor: '#2A2A4A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E1E3A',
+    gap: 6,
   },
-  tileCardLabel: { color: PALETTE.muted, fontSize: 10, letterSpacing: 1.5, marginBottom: 3 },
-  tileCardName:  { color: PALETTE.text,  fontSize: 20, fontWeight: '800' },
-  tileCardPrice: { color: PALETTE.goldLight, fontSize: 14, marginTop: 4 },
-  rentWarn:      { color: PALETTE.terra,     fontSize: 13, marginTop: 4 },
-  ownedGood:     { color: PALETTE.teal,      fontSize: 13, marginTop: 4 },
+  chips: {
+    flexDirection: 'row',
+    gap: 5,
+    flexWrap: 'wrap',
+  },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#12122A',
+    borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 4,
+    borderWidth: 1.5, borderColor: 'transparent',
+  },
+  chipDot:   { width: 8, height: 8, borderRadius: 4 },
+  chipName:  { color: PALETTE.text,  fontSize: 11, fontWeight: '700' },
+  chipMoney: { color: '#2ECC71',     fontSize: 10, fontWeight: '600' },
+
+  turnBar: {
+    borderLeftWidth: 3,
+    paddingLeft: 10,
+    paddingVertical: 1,
+  },
+  turnName: { fontSize: 13, fontWeight: '800' },
+  turnSub:  { color: PALETTE.muted, fontSize: 10, marginTop: 1 },
+
+  // ── Board area ──
+  boardArea: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: PALETTE.bg,
+  },
+
+  // ── Footer ──
+  footer: {
+    backgroundColor: PALETTE.surface,
+    borderTopWidth: 1,
+    borderTopColor: '#1E1E3A',
+    paddingBottom: Platform.OS === 'ios' ? 20 : 6,
+  },
+  tileStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1A1A32',
+    borderLeftWidth: 3,
+    borderLeftColor: 'transparent',
+  },
+  tileName:  { color: PALETTE.text,      fontSize: 13, fontWeight: '800', flex: 1 },
+  tileRent:  { color: PALETTE.terra,     fontSize: 11 },
+  tileOwned: { color: PALETTE.teal,      fontSize: 11 },
+  tilePrice: { color: PALETTE.goldLight, fontSize: 11 },
 });

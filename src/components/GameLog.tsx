@@ -21,8 +21,8 @@ export function GameLog({ log }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { margin: 10, marginBottom: 24 },
-  label:     { color: PALETTE.muted, fontSize: 10, letterSpacing: 1.5, marginBottom: 6 },
-  entry:     { color: PALETTE.muted, fontSize: 12, lineHeight: 20, paddingVertical: 1 },
+  container: { paddingHorizontal: 14, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#1A1A32' },
+  label:     { color: PALETTE.muted, fontSize: 9, letterSpacing: 1.5, marginBottom: 3 },
+  entry:     { color: PALETTE.muted, fontSize: 11, lineHeight: 16 },
   newest:    { color: PALETTE.sand,  fontWeight: '600' },
 });

@@ -3,23 +3,29 @@ import {
   View, Text, StyleSheet, Image, TouchableOpacity, Modal, Animated, Dimensions,
 } from 'react-native';
 import { GameState } from '../game/types';
-import { BOARD, GROUP_COLORS, PALETTE, TILE_ICONS, tileImage } from '../game/boardData';
+import {
+  BOARD, GROUP_COLORS, PALETTE, tileImage, TILE_ICON_IMAGES,
+} from '../game/boardData';
 
-// ── Board geometry — full screen width, flat ─────────────────────────────────
+// ── Board geometry ─────────────────────────────────────────────────────────
 const SW = Dimensions.get('window').width;
-const BS = SW - 4;                               // board square — fills screen
-const C  = Math.round(BS * 0.18);               // corner tile size  (~70px)
-const S  = Math.floor((BS - C * 2) / 6);        // side tile narrow dim (~43px)
+const BS = SW - 4;
+const C  = Math.round(BS * 0.18);          // corner tile (~70 px on 390 screen)
+const S  = Math.floor((BS - C * 2) / 6);  // side tile narrow dim (~43 px)
 
-// Perimeter order
 const BOTTOM    = [0, 1, 2, 3, 4, 5, 6, 7];
 const RIGHT_COL = [13, 12, 11, 10, 9, 8];
 const TOP       = [21, 20, 19, 18, 17, 16, 15, 14];
 const LEFT_COL  = [22, 23, 24, 25, 26, 27];
-
 const CORNER_SET = new Set([0, 7, 14, 21]);
 
-// ── Bounce token ─────────────────────────────────────────────────────────────
+// ── Resolve background image for any tile ─────────────────────────────────
+function tileBgUri(id: number, type: string, name: string): string | undefined {
+  if (type === 'property' || type === 'station') return tileImage(id, name);
+  return TILE_ICON_IMAGES[type];
+}
+
+// ── Bounce-in player token ─────────────────────────────────────────────────
 function BounceToken({ color, initial }: { color: string; initial: string }) {
   const scale = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -32,13 +38,8 @@ function BounceToken({ color, initial }: { color: string; initial: string }) {
   );
 }
 
-// ── Single tile ───────────────────────────────────────────────────────────────
-interface TileCellProps {
-  id: number;
-  gs: GameState;
-  onPress: () => void;
-  isVert?: boolean;
-}
+// ── Single tile ────────────────────────────────────────────────────────────
+interface TileCellProps { id: number; gs: GameState; onPress: () => void; isVert?: boolean; }
 
 function TileCell({ id, gs, onPress, isVert = false }: TileCellProps) {
   const tile       = BOARD[id];
@@ -47,29 +48,37 @@ function TileCell({ id, gs, onPress, isVert = false }: TileCellProps) {
   const owner      = prop?.ownerId ? gs.players[prop.ownerId] : null;
   const here       = Object.values(gs.players).filter(p => p.position === id);
   const groupColor = tile.group ? GROUP_COLORS[tile.group] : null;
+  const bgUri      = tileBgUri(tile.id, tile.type, tile.name);
 
   return (
     <TouchableOpacity
       style={[s.tile, isCorner && s.cornerTile, isVert && s.vertTile]}
       onPress={onPress}
-      activeOpacity={0.75}
+      activeOpacity={0.8}
     >
-      {/* ── Thick colour bar — the group identity marker ── */}
-      {groupColor && (
-        <View style={[s.colorBar, isVert ? s.colorBarVert : s.colorBarHoriz, { backgroundColor: groupColor }]} />
+      {/* Full-bleed background photo */}
+      {bgUri && (
+        <Image source={{ uri: bgUri }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
       )}
 
-      {/* ── Icon — big and centred ── */}
-      <Text style={[s.icon, isCorner && s.cornerIcon]}>
-        {TILE_ICONS[tile.type] ?? '⭐'}
-      </Text>
+      {/* Dark vignette so UI elements are readable */}
+      <View style={[s.vignette, isCorner && s.vignetteCorner]} />
 
-      {/* ── Corner only: readable name ── */}
+      {/* Group colour bar */}
+      {groupColor && (
+        <View style={[
+          s.colorBar,
+          isVert ? s.colorBarVert : s.colorBarTop,
+          { backgroundColor: groupColor },
+        ]} />
+      )}
+
+      {/* Corner label */}
       {isCorner && (
         <Text style={s.cornerName} numberOfLines={3}>{tile.name}</Text>
       )}
 
-      {/* ── Riad level pips ── */}
+      {/* Riad level pips */}
       {(prop?.level ?? 0) > 0 && (
         <View style={s.riadRow}>
           {Array.from({ length: prop!.level }).map((_, i) => (
@@ -78,10 +87,10 @@ function TileCell({ id, gs, onPress, isVert = false }: TileCellProps) {
         </View>
       )}
 
-      {/* ── Owner strip ── */}
+      {/* Owner strip at bottom */}
       {owner && <View style={[s.ownerStrip, { backgroundColor: owner.color }]} />}
 
-      {/* ── Player tokens ── */}
+      {/* Player tokens — centered */}
       {here.length > 0 && (
         <View style={s.tokens}>
           {here.map(p => (
@@ -93,38 +102,35 @@ function TileCell({ id, gs, onPress, isVert = false }: TileCellProps) {
   );
 }
 
-// ── Board ─────────────────────────────────────────────────────────────────────
+// ── Board ──────────────────────────────────────────────────────────────────
 interface Props { gameState: GameState; }
 
 export function BoardView({ gameState }: Props) {
   const [selected, setSelected] = useState<number | null>(null);
 
-  const selTile  = selected !== null ? BOARD[selected]                           : null;
-  const selProp  = selected !== null ? gameState.properties[String(selected)]   : null;
-  const selOwner = selProp?.ownerId   ? gameState.players[selProp.ownerId]       : null;
+  const selTile  = selected !== null ? BOARD[selected]                         : null;
+  const selProp  = selected !== null ? gameState.properties[String(selected)]  : null;
+  const selOwner = selProp?.ownerId   ? gameState.players[selProp.ownerId]      : null;
+
+  const selBgUri = selTile
+    ? tileBgUri(selTile.id, selTile.type, selTile.name)
+    : undefined;
 
   return (
     <View style={s.scene}>
-      {/* ── Walnut frame ── */}
+      {/* Walnut frame */}
       <View style={s.frame}>
         <View style={s.board}>
 
-          {/* TOP ROW */}
           <View style={s.hRow}>
-            {TOP.map(id => (
-              <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} />
-            ))}
+            {TOP.map(id => <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} />)}
           </View>
 
-          {/* MIDDLE */}
           <View style={s.middle}>
             <View style={s.vCol}>
-              {LEFT_COL.map(id => (
-                <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} isVert />
-              ))}
+              {LEFT_COL.map(id => <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} isVert />)}
             </View>
 
-            {/* CENTER */}
             <View style={s.center}>
               <View style={s.ring1} />
               <View style={s.ring2} />
@@ -133,23 +139,18 @@ export function BoardView({ gameState }: Props) {
             </View>
 
             <View style={s.vCol}>
-              {RIGHT_COL.map(id => (
-                <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} isVert />
-              ))}
+              {RIGHT_COL.map(id => <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} isVert />)}
             </View>
           </View>
 
-          {/* BOTTOM ROW */}
           <View style={s.hRow}>
-            {BOTTOM.map(id => (
-              <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} />
-            ))}
+            {BOTTOM.map(id => <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} />)}
           </View>
 
         </View>
       </View>
 
-      {/* ── Tile detail card (tap anywhere outside to close) ── */}
+      {/* ── Tile detail bottom-sheet ── */}
       <Modal
         visible={selected !== null}
         transparent
@@ -159,16 +160,14 @@ export function BoardView({ gameState }: Props) {
         <TouchableOpacity style={s.modalBg} activeOpacity={1} onPress={() => setSelected(null)}>
           {selTile && (
             <View style={s.card}>
-              {/* Hero image */}
-              {selTile.type === 'property' || selTile.type === 'station' ? (
-                <Image source={{ uri: tileImage(selTile.id, selTile.name) }} style={s.cardImg} resizeMode="cover" />
+              {/* Hero photo */}
+              {selBgUri ? (
+                <Image source={{ uri: selBgUri }} style={s.cardImg} resizeMode="cover" />
               ) : (
-                <View style={[s.cardImg, s.cardImgFallback]}>
-                  <Text style={{ fontSize: 56 }}>{TILE_ICONS[selTile.type] ?? '⭐'}</Text>
-                </View>
+                <View style={[s.cardImg, s.cardImgFallback]} />
               )}
 
-              {/* Group colour band */}
+              {/* Group band */}
               {selTile.group && (
                 <View style={[s.cardBand, { backgroundColor: GROUP_COLORS[selTile.group] }]} />
               )}
@@ -181,7 +180,7 @@ export function BoardView({ gameState }: Props) {
 
                 {selTile.rent && (
                   <View style={s.rentTable}>
-                    <Text style={s.rentHeader}>RENT</Text>
+                    <Text style={s.rentHeader}>RENT SCHEDULE</Text>
                     {['Base', '1 Riad', '2 Riads', '3 Riads', '4 Riads'].map((lbl, i) => (
                       <View key={i} style={s.rentRow}>
                         <Text style={s.rentLbl}>{lbl}</Text>
@@ -196,12 +195,14 @@ export function BoardView({ gameState }: Props) {
                     <View style={[s.ownerDot, { backgroundColor: selOwner.color }]} />
                     <Text style={s.ownerTxt}>Owned by {selOwner.name}</Text>
                     {(selProp?.level ?? 0) > 0 && (
-                      <Text style={[s.ownerLvl, { color: selOwner.color }]}>  Riad lvl {selProp!.level}</Text>
+                      <Text style={[s.ownerLvl, { color: selOwner.color }]}>
+                        · Riad lvl {selProp!.level}
+                      </Text>
                     )}
                   </View>
                 )}
 
-                <Text style={s.tapClose}>Tap outside to close</Text>
+                <Text style={s.tapClose}>Tap anywhere to close</Text>
               </View>
             </View>
           )}
@@ -211,15 +212,10 @@ export function BoardView({ gameState }: Props) {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-const TILE_BG    = '#0F1C14';
-const TILE_BDR   = '#1E3228';
-const CORNER_BG  = '#091510';
-
+// ── Styles ─────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   scene: { alignItems: 'center' },
 
-  // Walnut frame
   frame: {
     width:  BS + 8,
     height: BS + 8,
@@ -236,7 +232,6 @@ const s = StyleSheet.create({
     borderColor: '#5A2E10',
   },
 
-  // Green felt
   board: {
     width:  BS,
     height: BS,
@@ -247,12 +242,10 @@ const s = StyleSheet.create({
     borderColor: '#6A3A18',
   },
 
-  // ── Layout ──
   hRow:   { height: C, flexDirection: 'row', width: '100%' },
   middle: { flex: 1, flexDirection: 'row' },
   vCol:   { width: C, flex: 1, flexDirection: 'column' },
 
-  // ── Center ──
   center: {
     flex: 1,
     alignItems: 'center',
@@ -261,17 +254,13 @@ const s = StyleSheet.create({
   },
   ring1: {
     position: 'absolute',
-    width: C * 1.6, height: C * 1.6,
-    borderRadius: C * 0.8,
-    borderWidth: 1.5,
-    borderColor: PALETTE.goldLight + '35',
+    width: C * 1.6, height: C * 1.6, borderRadius: C * 0.8,
+    borderWidth: 1.5, borderColor: PALETTE.goldLight + '35',
   },
   ring2: {
     position: 'absolute',
-    width: C * 1.1, height: C * 1.1,
-    borderRadius: C * 0.55,
-    borderWidth: 1,
-    borderColor: PALETTE.goldLight + '20',
+    width: C * 1.1, height: C * 1.1, borderRadius: C * 0.55,
+    borderWidth: 1, borderColor: PALETTE.goldLight + '20',
   },
   centerTitle: {
     color: PALETTE.goldLight,
@@ -289,15 +278,15 @@ const s = StyleSheet.create({
     fontSize: Math.round(C * 0.13),
     textAlign: 'center',
     letterSpacing: 2,
-    marginTop: 6,
+    marginTop: 5,
   },
 
   // ── Tile ──
   tile: {
     flex: 1,
-    backgroundColor: TILE_BG,
+    backgroundColor: '#0F1C14',
     borderWidth: 0.5,
-    borderColor: TILE_BDR,
+    borderColor: '#1E3228',
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
@@ -305,7 +294,7 @@ const s = StyleSheet.create({
   cornerTile: {
     flex: undefined,
     width: C, height: C,
-    backgroundColor: CORNER_BG,
+    backgroundColor: '#091510',
     borderWidth: 1,
     borderColor: '#2A5040',
     alignItems: 'center',
@@ -318,37 +307,40 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // Colour bar — horizontal tiles: across the top; vertical tiles: left edge
-  colorBarHoriz: { position: 'absolute', top: 0, left: 0, right: 0, height: 8 },
-  colorBarVert:  { position: 'absolute', top: 0, left: 0, bottom: 0, width: 7 },
-  colorBar:      {},   // placeholder — combined with Horiz/Vert
+  // Semi-transparent overlay — makes text/tokens readable over any photo
+  vignette: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.42)',
+  } as any,
+  vignetteCorner: {
+    backgroundColor: 'rgba(0,0,0,0.52)',
+  },
 
-  icon:       { fontSize: Math.round(S * 0.48), lineHeight: Math.round(S * 0.56) },
-  cornerIcon: { fontSize: Math.round(C * 0.38), marginBottom: 2 },
+  // Group colour bars
+  colorBarTop:  { position: 'absolute', top: 0, left: 0, right: 0, height: 8 },
+  colorBarVert: { position: 'absolute', top: 0, left: 0, bottom: 0, width: 7 },
+  colorBar:     {},
 
   cornerName: {
     color: '#FFE899',
-    fontSize: Math.round(C * 0.115),
-    fontWeight: '800',
+    fontSize: Math.round(C * 0.13),
+    fontWeight: '900',
     textAlign: 'center',
     paddingHorizontal: 3,
-    lineHeight: Math.round(C * 0.15),
+    lineHeight: Math.round(C * 0.17),
+    textShadowColor: '#000',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
 
-  // Owner strip at very bottom
   ownerStrip: {
-    position: 'absolute',
-    bottom: 0, left: 0, right: 0,
+    position: 'absolute', bottom: 0, left: 0, right: 0,
     height: 5,
   },
 
-  // Riad pips
   riadRow: {
-    position: 'absolute',
-    bottom: 7, left: 0, right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 2,
+    position: 'absolute', bottom: 8, left: 0, right: 0,
+    flexDirection: 'row', justifyContent: 'center', gap: 2,
   },
   riadDot: {
     width: 5, height: 5, borderRadius: 3,
@@ -356,29 +348,24 @@ const s = StyleSheet.create({
     shadowColor: '#2ECC71', shadowOpacity: 0.9, shadowRadius: 3,
   },
 
-  // Player tokens
   tokens: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 2,
-    paddingTop: 8,
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    alignItems: 'center', justifyContent: 'center',
+    flexDirection: 'row', flexWrap: 'wrap', gap: 2,
+    paddingTop: 6,
   },
   token: {
     width: 18, height: 18, borderRadius: 9,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, borderColor: '#ffffffaa',
-    shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 3, elevation: 4,
+    borderWidth: 1.5, borderColor: '#ffffffbb',
+    shadowColor: '#000', shadowOpacity: 0.6, shadowRadius: 3, elevation: 4,
   },
   tokenTxt: { color: '#fff', fontSize: 9, fontWeight: '900' },
 
   // ── Detail modal ──
   modalBg: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'flex-end',
   },
   card: {
@@ -389,19 +376,19 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#2A2A4A',
   },
-  cardImg:        { width: '100%', height: 180 },
-  cardImgFallback:{ backgroundColor: PALETTE.surface2, alignItems: 'center', justifyContent: 'center' },
+  cardImg:        { width: '100%', height: 190 },
+  cardImgFallback:{ backgroundColor: PALETTE.surface2, height: 100 },
   cardBand:       { height: 6, width: '100%' },
-  cardBody:       { padding: 20, paddingBottom: 36 },
-  cardTitle:      { color: PALETTE.text,      fontSize: 22, fontWeight: '900', marginBottom: 4 },
-  cardPrice:      { color: PALETTE.goldLight,  fontSize: 16, marginBottom: 6, fontWeight: '700' },
-  cardTax:        { color: '#E74C3C',          fontSize: 16, marginBottom: 6 },
+  cardBody:       { padding: 20, paddingBottom: 40 },
+  cardTitle:      { color: PALETTE.text,     fontSize: 22, fontWeight: '900', marginBottom: 4 },
+  cardPrice:      { color: PALETTE.goldLight, fontSize: 15, fontWeight: '700', marginBottom: 4 },
+  cardTax:        { color: '#E74C3C',         fontSize: 15, marginBottom: 4 },
 
-  rentTable:  { marginTop: 10, gap: 4, borderTopWidth: 1, borderTopColor: '#2A2A4A', paddingTop: 10 },
+  rentTable:  { marginTop: 10, borderTopWidth: 1, borderTopColor: '#2A2A4A', paddingTop: 10, gap: 4 },
   rentHeader: { color: PALETTE.muted, fontSize: 10, letterSpacing: 2, marginBottom: 4 },
   rentRow:    { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 },
-  rentLbl:    { color: PALETTE.muted, fontSize: 14 },
-  rentAmt:    { color: PALETTE.text,  fontSize: 14, fontWeight: '700' },
+  rentLbl:    { color: PALETTE.muted, fontSize: 13 },
+  rentAmt:    { color: PALETTE.text,  fontSize: 13, fontWeight: '700' },
 
   ownerBadge: {
     flexDirection: 'row', alignItems: 'center',

@@ -89,6 +89,7 @@ export const PALETTE = {
 
 export const PLAYER_COLORS = ['#E74C3C', '#3498DB', '#2ECC71', '#F39C12'];
 
+// Legacy emoji map — kept for any non-visual fallback needs
 export const TILE_ICONS: Record<string, string> = {
   go:           '⭐',
   chance:       '❓',
@@ -97,4 +98,15 @@ export const TILE_ICONS: Record<string, string> = {
   free_parking: '🌴',
   go_to_jail:   '🚔',
   station:      '🚂',
+};
+
+// Moroccan-themed photo for each special tile type
+export const TILE_ICON_IMAGES: Record<string, string> = {
+  go:           'https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Marrakech_2009_Bab_Agnaou_Gate_LL.JPG/330px-Marrakech_2009_Bab_Agnaou_Gate_LL.JPG',
+  chance:       'https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Zellige_AL.svg/320px-Zellige_AL.svg.png',
+  tax:          'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/5dirhams_-_1987.png/320px-5dirhams_-_1987.png',
+  jail:         'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/City_Walls_Marrakech_%28348957920%29.jpg/320px-City_Walls_Marrakech_%28348957920%29.jpg',
+  free_parking: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Marrakesh_Menara_Garden_Pavilion_Arch.jpg/320px-Marrakesh_Menara_Garden_Pavilion_Arch.jpg',
+  go_to_jail:   'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/Mounted_Moroccan_Royal_Guards.JPG/330px-Mounted_Moroccan_Royal_Guards.JPG',
+  station:      'https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Marrakesh_railway_station_02.jpg/320px-Marrakesh_railway_station_02.jpg',
 };

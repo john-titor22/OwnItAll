@@ -179,7 +179,8 @@ const s = StyleSheet.create({
   boardArea: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 4,
     backgroundColor: PALETTE.bg,
   },
 

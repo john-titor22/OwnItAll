@@ -6,9 +6,9 @@ import { GameState } from '../game/types';
 import { BOARD, GROUP_COLORS, PALETTE, TILE_ICONS, tileImage } from '../game/boardData';
 
 // ── Board geometry ──────────────────────────────────────────────────────────
-const BS = 300;                            // board square (px)
-const C  = 50;                             // corner tile size
-const S  = Math.floor((BS - C * 2) / 6);  // ≈ 33 — side tile narrow dimension
+const BS = 324;                            // board square (px)
+const C  = 54;                             // corner tile size
+const S  = Math.floor((BS - C * 2) / 6);  // = 36 — side tile narrow dimension
 
 // Perimeter tile order for each side
 // Bottom row L→R   (corners: 0=BL, 7=BR)
@@ -145,10 +145,10 @@ export function BoardView({ gameState }: Props) {
 
               {/* CENTER */}
               <View style={styles.center}>
-                {/* Moroccan star pattern (CSS-only via box shadows not viable; use nested Views) */}
                 <View style={styles.starRing} />
+                <View style={styles.starRing2} />
                 <Text style={styles.centerTitle}>OWN{'\n'}IT ALL</Text>
-                <Text style={styles.centerSub}>✦ Marrakech ✦</Text>
+                <Text style={styles.centerSub}>✦  Marrakech  ✦</Text>
               </View>
 
               {/* RIGHT COLUMN */}
@@ -246,17 +246,19 @@ const styles = StyleSheet.create({
 
   // Walnut table surface behind the board
   table: {
-    width:  BS + 24,
-    height: BS + 16,
-    backgroundColor: '#3B1F0E',
-    borderRadius: 10,
+    width:  BS + 28,
+    height: BS + 20,
+    backgroundColor: '#2A1408',
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 28 },
-    shadowOpacity: 0.85,
-    shadowRadius: 24,
-    elevation: 28,
+    shadowOffset: { width: 0, height: 32 },
+    shadowOpacity: 0.9,
+    shadowRadius: 28,
+    elevation: 32,
+    borderWidth: 2,
+    borderColor: '#4A2810',
   },
 
   // Perspective tilt — looks like a real board on a table
@@ -264,24 +266,24 @@ const styles = StyleSheet.create({
     width: BS,
     height: BS,
     transform: [
-      { perspective: 700 },
-      { rotateX: '32deg' },
+      { perspective: 750 },
+      { rotateX: '30deg' },
     ],
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.6,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.7,
+    shadowRadius: 14,
   },
 
-  // Green felt board surface with wood border
+  // Green felt board surface with gold + wood border
   board: {
     width: BS,
     height: BS,
-    backgroundColor: '#1B5E35',
+    backgroundColor: '#185230',
     borderRadius: 4,
     overflow: 'hidden',
-    borderWidth: 5,
-    borderColor: '#6B3A1F',
+    borderWidth: 6,
+    borderColor: '#7A4520',
   },
 
   // ── Layout ──
@@ -305,40 +307,49 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1B5E35',
-    borderWidth: 0.5,
-    borderColor: '#2A7A4A',
+    backgroundColor: '#185230',
   },
   starRing: {
     position: 'absolute',
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    borderWidth: 2,
-    borderColor: PALETTE.goldLight + '33',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 1.5,
+    borderColor: PALETTE.goldLight + '40',
+  },
+  starRing2: {
+    position: 'absolute',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 1,
+    borderColor: PALETTE.goldLight + '25',
   },
   centerTitle: {
     color: PALETTE.goldLight,
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '900',
     textAlign: 'center',
     letterSpacing: 3,
-    lineHeight: 22,
+    lineHeight: 23,
+    textShadowColor: '#000a',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   centerSub: {
-    color: PALETTE.sand + 'AA',
-    fontSize: 7,
+    color: PALETTE.sand + 'CC',
+    fontSize: 7.5,
     textAlign: 'center',
-    letterSpacing: 2,
-    marginTop: 4,
+    letterSpacing: 2.5,
+    marginTop: 5,
   },
 
   // ── Tile ──
   tile: {
     flex: 1,
-    backgroundColor: PALETTE.surface,
+    backgroundColor: '#0E1B14',
     borderWidth: 0.5,
-    borderColor: '#1A2A1F',
+    borderColor: '#1E3028',
     overflow: 'hidden',
     alignItems: 'center',
   },
@@ -347,7 +358,9 @@ const styles = StyleSheet.create({
     width: C,
     height: C,
     justifyContent: 'center',
-    backgroundColor: '#0D1A12',
+    backgroundColor: '#081410',
+    borderWidth: 1,
+    borderColor: '#2A4A3A',
   },
   vertTile: {
     flex: 1,
@@ -356,31 +369,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  colorBar:  { height: 3, width: '100%' },
-  tileImg:   { width: '100%', height: 24 },
-  icon:      { fontSize: 9, marginTop: 2, lineHeight: 11 },
-  cornerIcon:{ fontSize: 18, marginBottom: 2 },
+  colorBar:   { height: 5, width: '100%' },
+  tileImg:    { width: '100%', height: 26 },
+  icon:       { fontSize: 10, marginTop: 1, lineHeight: 12 },
+  cornerIcon: { fontSize: 20, marginBottom: 2 },
 
   name: {
-    color: PALETTE.text,
-    fontSize: 5.5,
+    color: '#D4CFC5',
+    fontSize: 6,
     textAlign: 'center',
     paddingHorizontal: 1,
-    lineHeight: 7,
+    lineHeight: 8,
+    fontWeight: '600',
   },
   cornerName: {
-    fontSize: 7,
-    fontWeight: '700',
-    lineHeight: 9,
+    color: '#FFE899',
+    fontSize: 7.5,
+    fontWeight: '800',
+    lineHeight: 10,
+    textAlign: 'center',
+    paddingHorizontal: 3,
   },
   price: {
     color: PALETTE.goldLight,
-    fontSize: 5.5,
+    fontSize: 6,
+    fontWeight: '700',
   },
   ownerStrip: {
     position: 'absolute',
     bottom: 0, left: 0, right: 0,
-    height: 3,
+    height: 4,
+    opacity: 0.9,
   },
   riadRow: {
     flexDirection: 'row',
@@ -391,21 +410,27 @@ const styles = StyleSheet.create({
   riadDot: {
     width: 4, height: 4, borderRadius: 2,
     backgroundColor: '#2ECC71',
+    shadowColor: '#2ECC71',
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
   },
   tokens: {
     position: 'absolute',
-    bottom: 4, right: 2,
+    bottom: 5, right: 2,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 1,
-    maxWidth: 28,
+    maxWidth: 30,
   },
   token: {
-    width: 12, height: 12, borderRadius: 6,
+    width: 13, height: 13, borderRadius: 7,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 0.5, borderColor: '#fff4',
+    borderWidth: 1, borderColor: '#fff5',
+    shadowColor: '#000',
+    shadowOpacity: 0.4,
+    shadowRadius: 2,
   },
-  tokenTxt: { color: '#fff', fontSize: 6, fontWeight: 'bold' },
+  tokenTxt: { color: '#fff', fontSize: 7, fontWeight: 'bold' },
 
   // ── Detail modal ──
   overlay: {

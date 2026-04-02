@@ -42,14 +42,25 @@ export default function GameScreen() {
     <View style={styles.root}>
 
       {/* ── Turn banner ── */}
-      <View style={[styles.banner, { borderBottomColor: accentColor + '44' }]}>
+      <View style={[styles.banner, { borderBottomColor: accentColor + '33' }]}>
         <View style={[styles.dot, { backgroundColor: accentColor }]} />
-        <Text style={styles.bannerName}>
-          {isMyTurn ? 'Your Turn' : `${currentPlayer.name}'s Turn`}
-        </Text>
-        <Text style={[styles.phase, { color: accentColor }]}>
-          {gameState.phase.replace('_', ' ').toUpperCase()}
-        </Text>
+        <View style={styles.bannerInfo}>
+          <Text style={styles.bannerName}>
+            {isMyTurn ? 'Your Turn' : `${currentPlayer.name}'s Turn`}
+          </Text>
+          <Text style={styles.bannerSub}>
+            {isMyTurn
+              ? gameState.phase === 'roll'     ? 'Roll the dice to move'
+              : gameState.phase === 'action'   ? 'Choose an action'
+              :                                  'End your turn'
+              : 'Waiting for other player…'}
+          </Text>
+        </View>
+        {isMyTurn && (
+          <View style={[styles.turnBadge, { backgroundColor: accentColor + '22', borderColor: accentColor + '55' }]}>
+            <Text style={[styles.turnBadgeTxt, { color: accentColor }]}>YOUR TURN</Text>
+          </View>
+        )}
       </View>
 
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -108,12 +119,18 @@ const styles = StyleSheet.create({
 
   banner: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingTop: 52, paddingBottom: 12,
-    gap: 10, borderBottomWidth: 1,
+    paddingHorizontal: 16, paddingTop: 52, paddingBottom: 14,
+    gap: 12, borderBottomWidth: 1,
   },
-  dot:        { width: 11, height: 11, borderRadius: 6 },
-  bannerName: { flex: 1, color: PALETTE.text, fontSize: 17, fontWeight: '800' },
-  phase:      { fontSize: 10, letterSpacing: 1.5, fontWeight: '700' },
+  dot:        { width: 12, height: 12, borderRadius: 6 },
+  bannerInfo: { flex: 1 },
+  bannerName: { color: PALETTE.text, fontSize: 17, fontWeight: '800' },
+  bannerSub:  { color: PALETTE.muted, fontSize: 11, marginTop: 1 },
+  turnBadge: {
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 8, borderWidth: 1,
+  },
+  turnBadgeTxt: { fontSize: 9, fontWeight: '800', letterSpacing: 1.5 },
 
   tileCard: {
     backgroundColor: PALETTE.surface,

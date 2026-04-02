@@ -40,15 +40,20 @@ function BounceToken({ color, initial }: { color: string; initial: string }) {
 
 // ── Single tile ────────────────────────────────────────────────────────────
 type Side = 'top' | 'bottom' | 'left' | 'right';
-interface TileCellProps { id: number; gs: GameState; onPress: () => void; side?: Side; }
+interface TileCellProps {
+  id: number; gs: GameState; onPress: () => void;
+  side?: Side; displayPositions?: Record<string, number>;
+}
 
-function TileCell({ id, gs, onPress, side = 'bottom' }: TileCellProps) {
+function TileCell({ id, gs, onPress, side = 'bottom', displayPositions }: TileCellProps) {
   const tile       = BOARD[id];
   const isCorner   = CORNER_SET.has(id);
   const isVert     = side === 'left' || side === 'right';
   const prop       = gs.properties[String(id)];
   const owner      = prop?.ownerId ? gs.players[prop.ownerId] : null;
-  const here       = Object.values(gs.players).filter(p => p.position === id);
+  const here       = Object.values(gs.players).filter(p =>
+    (displayPositions?.[p.id] ?? p.position) === id
+  );
   const groupColor = tile.group ? GROUP_COLORS[tile.group] : null;
   const bgUri      = tileBgUri(tile.id, tile.type, tile.name);
 
@@ -92,8 +97,18 @@ function TileCell({ id, gs, onPress, side = 'bottom' }: TileCellProps) {
         </View>
       )}
 
-      {/* Owner strip at bottom */}
-      {owner && <View style={[s.ownerStrip, { backgroundColor: owner.color }]} />}
+      {/* Owner strip — glows with owner colour */}
+      {owner && (
+        <View style={[
+          s.ownerStrip,
+          {
+            backgroundColor: owner.color,
+            shadowColor:      owner.color,
+            shadowOpacity:    0.9,
+            shadowRadius:     6,
+          },
+        ]} />
+      )}
 
       {/* Player tokens — centered */}
       {here.length > 0 && (
@@ -108,9 +123,9 @@ function TileCell({ id, gs, onPress, side = 'bottom' }: TileCellProps) {
 }
 
 // ── Board ──────────────────────────────────────────────────────────────────
-interface Props { gameState: GameState; }
+interface Props { gameState: GameState; displayPositions?: Record<string, number>; }
 
-export function BoardView({ gameState }: Props) {
+export function BoardView({ gameState, displayPositions }: Props) {
   const [selected, setSelected] = useState<number | null>(null);
 
   const selTile  = selected !== null ? BOARD[selected]                         : null;
@@ -128,12 +143,12 @@ export function BoardView({ gameState }: Props) {
         <View style={s.board}>
 
           <View style={s.hRow}>
-            {TOP.map(id => <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} side="top" />)}
+            {TOP.map(id => <TileCell key={id} id={id} gs={gameState} displayPositions={displayPositions} onPress={() => setSelected(id)} side="top" />)}
           </View>
 
           <View style={s.middle}>
             <View style={s.vCol}>
-              {LEFT_COL.map(id => <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} side="left" />)}
+              {LEFT_COL.map(id => <TileCell key={id} id={id} gs={gameState} displayPositions={displayPositions} onPress={() => setSelected(id)} side="left" />)}
             </View>
 
             <View style={s.center}>
@@ -144,12 +159,12 @@ export function BoardView({ gameState }: Props) {
             </View>
 
             <View style={s.vCol}>
-              {RIGHT_COL.map(id => <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} side="right" />)}
+              {RIGHT_COL.map(id => <TileCell key={id} id={id} gs={gameState} displayPositions={displayPositions} onPress={() => setSelected(id)} side="right" />)}
             </View>
           </View>
 
           <View style={s.hRow}>
-            {BOTTOM.map(id => <TileCell key={id} id={id} gs={gameState} onPress={() => setSelected(id)} side="bottom" />)}
+            {BOTTOM.map(id => <TileCell key={id} id={id} gs={gameState} displayPositions={displayPositions} onPress={() => setSelected(id)} side="bottom" />)}
           </View>
 
         </View>

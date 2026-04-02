@@ -6,6 +6,7 @@ import { BOARD, PALETTE } from '../game/boardData';
 interface Props {
   phase: GamePhase;
   canBuy: boolean;
+  showEndTurn?: boolean;   // false = End Turn handled by PurchaseModal
   upgradableTiles: number[];
   gameState: GameState;
   myId: string;
@@ -16,7 +17,7 @@ interface Props {
 }
 
 export function GameControls({
-  phase, canBuy, upgradableTiles,
+  phase, canBuy, showEndTurn = true, upgradableTiles,
   gameState, myId,
   onRoll, onBuy, onEndTurn, onUpgrade,
 }: Props) {
@@ -32,13 +33,13 @@ export function GameControls({
           </TouchableOpacity>
         )}
 
-        {phase === 'action' && canBuy && (
+        {canBuy && phase === 'action' && (
           <TouchableOpacity style={[s.btn, s.btnTeal]} onPress={onBuy} activeOpacity={0.8}>
-            <Text style={s.btnLightTxt}>🛒  Buy Property</Text>
+            <Text style={s.btnLightTxt}>🛒  Buy</Text>
           </TouchableOpacity>
         )}
 
-        {(phase === 'end_turn' || phase === 'action') && (
+        {showEndTurn && (phase === 'end_turn' || phase === 'action') && (
           <TouchableOpacity style={[s.btn, s.btnOutline]} onPress={onEndTurn} activeOpacity={0.8}>
             <Text style={s.btnOutlineTxt}>End Turn  →</Text>
           </TouchableOpacity>

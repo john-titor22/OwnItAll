@@ -137,7 +137,7 @@ export default function GameScreen() {
 }
 
 const s = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: PALETTE.bg },
+  root:   { flex: 1, backgroundColor: PALETTE.bg, maxWidth: 480, alignSelf: 'center', width: '100%' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: PALETTE.bg },
   dim:    { color: PALETTE.muted },
 

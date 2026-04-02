@@ -9,9 +9,9 @@ import {
 
 // ── Board geometry ─────────────────────────────────────────────────────────
 const SW = Dimensions.get('window').width;
-const BS = SW - 4;
-const C  = Math.round(BS * 0.18);          // corner tile (~70 px on 390 screen)
-const S  = Math.floor((BS - C * 2) / 6);  // side tile narrow dim (~43 px)
+const BS = Math.min(SW - 20, 352);         // capped so web doesn't blow up
+const C  = Math.round(BS * 0.18);          // corner tile
+const S  = Math.floor((BS - C * 2) / 6);  // side tile narrow dim
 
 const BOTTOM    = [0, 1, 2, 3, 4, 5, 6, 7];
 const RIGHT_COL = [13, 12, 11, 10, 9, 8];
@@ -239,6 +239,7 @@ const s = StyleSheet.create({
   board: {
     width:  BS,
     height: BS,
+    flexDirection: 'column',
     backgroundColor: '#1A5E38',
     borderRadius: 4,
     overflow: 'hidden',
@@ -246,9 +247,9 @@ const s = StyleSheet.create({
     borderColor: '#6A3A18',
   },
 
-  hRow:   { height: C, flexDirection: 'row', width: '100%' },
-  middle: { flex: 1, flexDirection: 'row' },
-  vCol:   { width: C, flex: 1, flexDirection: 'column' },
+  hRow:   { height: C, width: BS, flexDirection: 'row' },
+  middle: { width: BS, height: BS - C * 2, flexDirection: 'row' },
+  vCol:   { width: C,  height: BS - C * 2, flexDirection: 'column' },
 
   center: {
     flex: 1,

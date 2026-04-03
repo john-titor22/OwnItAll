@@ -115,22 +115,26 @@ export function useGameState(gameId: string, playerId: string) {
         nextPhase = 'end_turn';
       } else {
         // Pay rent
-        const rent = tile.type === 'station'
-          ? calculateStationRent(ownerId, gameState.properties)
-          : calculateRent(tile, propState, gameState.properties);
-
-        const ownerMoney = gameState.players[ownerId].money + rent;
-        patch[`players/${playerId}/money`] = money - rent;
-        patch[`players/${ownerId}/money`]  = ownerMoney;
-
-        // Bankruptcy check
-        if (money - rent < 0) {
-          patch[`players/${playerId}/isBankrupt`] = true;
-          log.push(`${player.name} went bankrupt paying ${rent} MAD rent to ${gameState.players[ownerId].name}!`);
+        const ownerPlayer = gameState.players[ownerId];
+        if (!ownerPlayer) {
+          // Corrupt state guard — treat as unowned
+          nextPhase = 'action';
         } else {
-          log.push(`${player.name} paid ${rent} MAD rent to ${gameState.players[ownerId].name}`);
+          const rent = tile.type === 'station'
+            ? calculateStationRent(ownerId, gameState.properties)
+            : calculateRent(tile, propState, gameState.properties);
+
+          patch[`players/${playerId}/money`] = money - rent;
+          patch[`players/${ownerId}/money`]  = ownerPlayer.money + rent;
+
+          if (money - rent < 0) {
+            patch[`players/${playerId}/isBankrupt`] = true;
+            log.push(`${player.name} went bankrupt paying ${rent} MAD rent to ${ownerPlayer.name}!`);
+          } else {
+            log.push(`${player.name} paid ${rent} MAD rent to ${ownerPlayer.name}`);
+          }
+          nextPhase = 'end_turn';
         }
-        nextPhase = 'end_turn';
       }
     }
 

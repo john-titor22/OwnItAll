@@ -97,8 +97,9 @@ export default function GameScreen() {
       {/* ── Header ── */}
       <View style={s.header}>
 
+        {/* Player cards row — wraps cleanly for 2-4 players */}
         <View style={s.playerRow}>
-          {gameState.playerOrder.map((pid, idx) => {
+          {gameState.playerOrder.map((pid) => {
             const p        = gameState.players[pid];
             const isActive = pid === gameState.playerOrder[currentIdx];
             const isMe     = pid === uid;
@@ -139,12 +140,12 @@ export default function GameScreen() {
               </View>
             );
           })}
+        </View>
 
-          {/* Turn chip — right-aligned in the same row as player cards */}
-          <View style={[s.turnChip, { backgroundColor: accentColor + '22', borderColor: accentColor + '55' }]}>
-            <View style={[s.chipDot, { backgroundColor: accentColor }]} />
-            <Text style={[s.chipText, { color: accentColor }]} numberOfLines={1}>{turnLabel}</Text>
-          </View>
+        {/* Turn chip — own row so it never fights with player cards */}
+        <View style={[s.turnChip, { backgroundColor: accentColor + '22', borderColor: accentColor + '55' }]}>
+          <View style={[s.chipDot, { backgroundColor: accentColor }]} />
+          <Text style={[s.chipText, { color: accentColor }]} numberOfLines={1}>{turnLabel}</Text>
         </View>
 
       </View>
@@ -170,12 +171,14 @@ export default function GameScreen() {
           </View>
 
           {/* Log entries — 2 lines, very muted */}
-          {[...(Array.isArray(gameState.log) ? gameState.log : Object.values(gameState.log))]
-            .reverse().slice(0, 2).map((entry, i) => (
-              <Text key={i} style={[s.infoLog, i === 0 && s.infoLogNewest]} numberOfLines={1}>
-                {i === 0 ? '▸ ' : '  '}{entry}
-              </Text>
-            ))}
+          {[...(Array.isArray(gameState.log)
+            ? gameState.log
+            : Object.values(gameState.log ?? {})
+          )].reverse().slice(0, 2).map((entry, i) => (
+            <Text key={i} style={[s.infoLog, i === 0 && s.infoLogNewest]} numberOfLines={1}>
+              {i === 0 ? '▸ ' : '  '}{entry}
+            </Text>
+          ))}
         </View>
       )}
 
@@ -284,9 +287,9 @@ const s = StyleSheet.create({
   header: {
     paddingTop: Platform.OS === 'ios' ? 52 : 26,
     paddingHorizontal: 12,
-    paddingBottom: 6,
+    paddingBottom: 4,
   },
-  playerRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' },
+  playerRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   playerCard: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: '#13132B', borderRadius: 14,
@@ -301,12 +304,13 @@ const s = StyleSheet.create({
   playerMoney:  { color: '#2ECC71',     fontSize: 11, fontWeight: '700' },
   activeDot:    { width: 7, height: 7, borderRadius: 4, marginLeft: 2, shadowOpacity: 0.9, shadowRadius: 4 },
 
-  // Turn chip — inline with player cards
+  // Turn chip — sits on its own compact row below player cards
   turnChip: {
-    marginLeft: 'auto',
+    alignSelf: 'flex-start',
     flexDirection: 'row', alignItems: 'center', gap: 6,
     borderRadius: 16, borderWidth: 1,
-    paddingHorizontal: 10, paddingVertical: 5,
+    paddingHorizontal: 10, paddingVertical: 4,
+    marginTop: 4,
   },
   chipDot:  { width: 6, height: 6, borderRadius: 3 },
   chipText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },

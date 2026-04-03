@@ -328,13 +328,13 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // Semi-transparent overlay — makes text/tokens readable over any photo
+  // Semi-transparent overlay — makes tokens readable over photos; keep light
   vignette: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.42)',
+    backgroundColor: 'rgba(0,0,0,0.22)',
   } as any,
   vignetteCorner: {
-    backgroundColor: 'rgba(0,0,0,0.52)',
+    backgroundColor: 'rgba(0,0,0,0.35)',
   },
 
   // Group colour bars — each hugs the OUTER edge of the board

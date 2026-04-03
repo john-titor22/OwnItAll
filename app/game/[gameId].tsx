@@ -6,7 +6,6 @@ import { useGameState }       from '../../src/hooks/useGameState';
 import { useTokenAnimation }  from '../../src/hooks/useTokenAnimation';
 import { BoardView }          from '../../src/components/BoardView';
 import { GameControls }       from '../../src/components/GameControls';
-import { GameLog }            from '../../src/components/GameLog';
 import { DiceRollOverlay }    from '../../src/components/DiceRollOverlay';
 import { PurchaseModal }      from '../../src/components/PurchaseModal';
 import { FloatingText, useFloatingTransactions, PlayerLayout } from '../../src/components/FloatingText';
@@ -150,6 +149,36 @@ export default function GameScreen() {
 
       </View>
 
+      {/* ── Subtle info strip — tile name + log, sits in dead space above board ── */}
+      {myPlayer && currentTile && (
+        <View style={s.infoStrip}>
+          <View style={s.infoRow}>
+            <View style={[
+              s.infoTileDot,
+              currentTile.group && { backgroundColor: GROUP_COLORS[currentTile.group] },
+            ]} />
+            <Text style={s.infoTileName} numberOfLines={1}>{currentTile.name}</Text>
+            {!prop?.ownerId && currentTile.price && (
+              <Text style={s.infoPrice}>{currentTile.price} MAD</Text>
+            )}
+            {tileOwner && tileOwner.id !== uid && (
+              <Text style={s.infoOwned}>💸 {tileOwner.name}</Text>
+            )}
+            {prop?.ownerId === uid && (
+              <Text style={[s.infoOwned, { color: PALETTE.teal }]}>✓ Yours</Text>
+            )}
+          </View>
+
+          {/* Log entries — 2 lines, very muted */}
+          {[...(Array.isArray(gameState.log) ? gameState.log : Object.values(gameState.log))]
+            .reverse().slice(0, 2).map((entry, i) => (
+              <Text key={i} style={[s.infoLog, i === 0 && s.infoLogNewest]} numberOfLines={1}>
+                {i === 0 ? '▸ ' : '  '}{entry}
+              </Text>
+            ))}
+        </View>
+      )}
+
       {/* ── Board ── tap empty space to dismiss action card */}
       <Pressable
         style={s.boardArea}
@@ -191,39 +220,7 @@ export default function GameScreen() {
           />
         )}
 
-        {myPlayer && currentTile && (
-          <View style={[
-            s.tileCard,
-            currentTile.group && { borderLeftColor: GROUP_COLORS[currentTile.group] },
-          ]}>
-            <View style={s.tileCardLeft}>
-              <Text style={s.tileName} numberOfLines={1}>{currentTile.name}</Text>
-              {tileOwner && tileOwner.id !== uid && (
-                <Text style={s.tileStatus}>
-                  Owned by {tileOwner.name} · Riad lvl {prop!.level}
-                </Text>
-              )}
-              {prop?.ownerId === uid && (
-                <Text style={[s.tileStatus, { color: PALETTE.teal }]}>
-                  Your property · Riad lvl {prop.level}
-                </Text>
-              )}
-              {!prop?.ownerId && currentTile.price && (
-                <Text style={[s.tileStatus, { color: PALETTE.muted }]}>For sale</Text>
-              )}
-            </View>
-            {!prop?.ownerId && currentTile.price && (
-              <View style={s.priceBadge}>
-                <Text style={s.priceText}>{currentTile.price}</Text>
-                <Text style={s.priceCur}>MAD</Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        <GameLog log={gameState.log} />
-
-        {/* Roll Dice + Riad buttons stay in footer; Buy + End Turn moved to PurchaseModal */}
+        {/* Roll Dice + Riad buttons; Buy + End Turn are in PurchaseModal */}
         {isMyTurn && (
           <GameControls
             phase={gameState.phase}
@@ -353,6 +350,42 @@ const s = StyleSheet.create({
   },
   peekEndTxt: { color: PALETTE.text, fontSize: 13, fontWeight: '700' },
 
+  // Subtle info strip — between header and board
+  infoStrip: {
+    paddingHorizontal: 16,
+    paddingVertical: 5,
+    gap: 1,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  infoTileDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: PALETTE.muted,
+  },
+  infoTileName: {
+    flex: 1,
+    color: PALETTE.text,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  infoPrice: {
+    color: PALETTE.goldLight,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  infoOwned: {
+    color: PALETTE.muted,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  infoLog:       { color: PALETTE.muted,  fontSize: 9,  lineHeight: 13 },
+  infoLogNewest: { color: PALETTE.sand,   fontSize: 10, fontWeight: '600' },
+
   // Footer
   footer: {
     backgroundColor: '#0E0E22',
@@ -360,20 +393,4 @@ const s = StyleSheet.create({
     borderTopColor: '#1A1A36',
     paddingBottom: Platform.OS === 'ios' ? 22 : 8,
   },
-  tileCard: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: '#1A1A36',
-    borderLeftWidth: 4, borderLeftColor: PALETTE.muted, gap: 10,
-  },
-  tileCardLeft: { flex: 1, gap: 2 },
-  tileName:     { color: PALETTE.text,      fontSize: 14, fontWeight: '900' },
-  tileStatus:   { color: PALETTE.terra,     fontSize: 11, fontWeight: '600' },
-  priceBadge: {
-    backgroundColor: PALETTE.goldLight + '22', borderRadius: 10,
-    borderWidth: 1, borderColor: PALETTE.goldLight + '55',
-    paddingHorizontal: 10, paddingVertical: 5, alignItems: 'center',
-  },
-  priceText: { color: PALETTE.goldLight, fontSize: 16, fontWeight: '900' },
-  priceCur:  { color: PALETTE.goldLight, fontSize: 9,  fontWeight: '600', opacity: 0.8 },
 });

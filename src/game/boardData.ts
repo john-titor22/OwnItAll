@@ -1,30 +1,45 @@
 import { Tile } from './types';
 
-// Real Wikimedia Commons thumbnails for each Marrakech landmark
+// Curated Wikimedia Commons thumbnails — verified filenames for each tile
 export const TILE_IMAGES: Record<number, string> = {
-  0:  'https://upload.wikimedia.org/wikipedia/commons/thumb/1/13/Marrakech_Medina.jpg/320px-Marrakech_Medina.jpg',
-  1:  'https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Marrakesh_medina_streets.jpg/320px-Marrakesh_medina_streets.jpg',
-  3:  'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Bab_Doukkala_Marrakesh.jpg/320px-Bab_Doukkala_Marrakesh.jpg',
-  5:  'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Marrakech_Gare_ONCF.jpg/320px-Marrakech_Gare_ONCF.jpg',
-  6:  'https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Marrakesh_-_Mellah.jpg/320px-Marrakesh_-_Mellah.jpg',
-  8:  'https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Mouassine_mosque_marrakech.jpg/320px-Mouassine_mosque_marrakech.jpg',
-  9:  'https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Riad_in_Marrakech.jpg/320px-Riad_in_Marrakech.jpg',
+  // Bottom row (ids 0-7)
+  0:  'https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Marrakech_2009_Bab_Agnaou_Gate_LL.JPG/320px-Marrakech_2009_Bab_Agnaou_Gate_LL.JPG',
+  1:  'https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Marrakesh_medina_derb_dabachi.jpg/320px-Marrakesh_medina_derb_dabachi.jpg',
+  3:  'https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Marrakesh_BabDoukkala.jpg/320px-Marrakesh_BabDoukkala.jpg',
+  5:  'https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Marrakesh_railway_station_02.jpg/320px-Marrakesh_railway_station_02.jpg',
+  6:  'https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Marrakesh_Mellah.jpg/320px-Marrakesh_Mellah.jpg',
+  // Right column (ids 8-13)
+  8:  'https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Mouassine_Mosque_Marrakesh.jpg/320px-Mouassine_Mosque_Marrakesh.jpg',
+  9:  'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Riad_Zitoun_Marrakesh.jpg/320px-Riad_Zitoun_Marrakesh.jpg',
   11: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Ben_Youssef_Madrasa_Marrakech_cropped.jpg/320px-Ben_Youssef_Madrasa_Marrakech_cropped.jpg',
   12: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Dar_Si_Said_Marrakech.jpg/320px-Dar_Si_Said_Marrakech.jpg',
   13: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Marrakesh_Bahia_Palace_1.jpg/320px-Marrakesh_Bahia_Palace_1.jpg',
+  // Top row (ids 15-21)
   15: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Saadian_Tombs_-_Marrakesh%2C_Morocco.jpg/320px-Saadian_Tombs_-_Marrakesh%2C_Morocco.jpg',
   17: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/El_Badi_palace_Marrakech.jpg/320px-El_Badi_palace_Marrakech.jpg',
   18: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Menara_Gardens_Marrakesh.jpg/320px-Menara_Gardens_Marrakesh.jpg',
-  20: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Marrakech_Jardin_Majorelle.jpg/320px-Marrakech_Jardin_Majorelle.jpg',
-  22: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Cyber_Park_Marrakesh.jpg/320px-Cyber_Park_Marrakesh.jpg',
-  24: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Koutoubia-Minaret.jpg/320px-Koutoubia-Minaret.jpg',
+  20: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Majorelle_Garden_Marrakech.jpg/320px-Majorelle_Garden_Marrakech.jpg',
+  // Left column (ids 22-27)
+  22: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Cyber_Park_Arset_El_Harti_Marrakesh.jpg/320px-Cyber_Park_Arset_El_Harti_Marrakesh.jpg',
+  24: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Koutoubia_Mosque_minaret.jpg/320px-Koutoubia_Mosque_minaret.jpg',
   25: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Jemaa_el-Fna_at_dusk.jpg/320px-Jemaa_el-Fna_at_dusk.jpg',
-  27: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Souk_Marrakech.jpg/320px-Souk_Marrakech.jpg',
+  27: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/Marrakesh_Souk.jpg/320px-Marrakesh_Souk.jpg',
 };
 
-// Fallback: picsum with deterministic seed if Wikimedia fails
+// Moroccan-themed photo for each special tile type
+export const TILE_ICON_IMAGES: Record<string, string> = {
+  go:           'https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Marrakech_2009_Bab_Agnaou_Gate_LL.JPG/330px-Marrakech_2009_Bab_Agnaou_Gate_LL.JPG',
+  chance:       'https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Zellij_Alhambra.jpg/320px-Zellij_Alhambra.jpg',
+  tax:          'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Maroc_Dirhams.jpg/320px-Maroc_Dirhams.jpg',
+  jail:         'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/City_Walls_Marrakech_%28348957920%29.jpg/320px-City_Walls_Marrakech_%28348957920%29.jpg',
+  free_parking: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Marrakesh_Menara_Garden_Pavilion_Arch.jpg/320px-Marrakesh_Menara_Garden_Pavilion_Arch.jpg',
+  go_to_jail:   'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/Mounted_Moroccan_Royal_Guards.JPG/330px-Mounted_Moroccan_Royal_Guards.JPG',
+  station:      'https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Marrakesh_railway_station_02.jpg/320px-Marrakesh_railway_station_02.jpg',
+};
+
+// Fallback: picsum with deterministic seed per tile name
 export function tileImage(id: number, name: string): string {
-  return TILE_IMAGES[id] ?? `https://picsum.photos/seed/${encodeURIComponent(name)}/300/180`;
+  return TILE_IMAGES[id] ?? `https://picsum.photos/seed/marrakech-${id}/300/200`;
 }
 
 export const BOARD: Tile[] = [
@@ -100,13 +115,3 @@ export const TILE_ICONS: Record<string, string> = {
   station:      '🚂',
 };
 
-// Moroccan-themed photo for each special tile type
-export const TILE_ICON_IMAGES: Record<string, string> = {
-  go:           'https://upload.wikimedia.org/wikipedia/commons/thumb/d/da/Marrakech_2009_Bab_Agnaou_Gate_LL.JPG/330px-Marrakech_2009_Bab_Agnaou_Gate_LL.JPG',
-  chance:       'https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Zellige_AL.svg/320px-Zellige_AL.svg.png',
-  tax:          'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/5dirhams_-_1987.png/320px-5dirhams_-_1987.png',
-  jail:         'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/City_Walls_Marrakech_%28348957920%29.jpg/320px-City_Walls_Marrakech_%28348957920%29.jpg',
-  free_parking: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Marrakesh_Menara_Garden_Pavilion_Arch.jpg/320px-Marrakesh_Menara_Garden_Pavilion_Arch.jpg',
-  go_to_jail:   'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/Mounted_Moroccan_Royal_Guards.JPG/330px-Mounted_Moroccan_Royal_Guards.JPG',
-  station:      'https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Marrakesh_railway_station_02.jpg/320px-Marrakesh_railway_station_02.jpg',
-};

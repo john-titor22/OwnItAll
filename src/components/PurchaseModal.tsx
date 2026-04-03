@@ -13,12 +13,13 @@ interface Props {
   canBuy:      boolean;
   isMyTurn:    boolean;
   playerMoney: number;
+  dismissed?:  boolean;
   onBuy:       () => void;
   onEndTurn:   () => void;
 }
 
 export function PurchaseModal({
-  tileId, phase, canBuy, isMyTurn, playerMoney,
+  tileId, phase, canBuy, isMyTurn, playerMoney, dismissed,
   onBuy, onEndTurn,
 }: Props) {
   const slideY  = useRef(new Animated.Value(300)).current;
@@ -26,18 +27,21 @@ export function PurchaseModal({
 
   const showPurchase = isMyTurn && canBuy && phase === 'action' && tileId !== null;
   const showEndTurn  = isMyTurn && (phase === 'end_turn' || (phase === 'action' && !canBuy));
-  const visible      = showPurchase || showEndTurn;
+  const visible      = (showPurchase || showEndTurn) && !dismissed;
 
   useEffect(() => {
     if (visible) {
       Animated.parallel([
-        Animated.spring(slideY,  { toValue: 0,   friction: 8, tension: 100, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.sequence([
+          Animated.delay(80),
+          Animated.spring(slideY, { toValue: 0, friction: 7, tension: 60, useNativeDriver: true }),
+        ]),
+        Animated.timing(opacity, { toValue: 1, duration: 240, useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(slideY,  { toValue: 300, duration: 220, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0,   duration: 180, useNativeDriver: true }),
+        Animated.timing(slideY,  { toValue: 300, duration: 200, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0,   duration: 160, useNativeDriver: true }),
       ]).start();
     }
   }, [visible]);

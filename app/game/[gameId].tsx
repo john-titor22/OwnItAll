@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, Alert, Platform, Pressable, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useAuth }            from '../../src/hooks/useAuth';
 import { useGameState }       from '../../src/hooks/useGameState';
@@ -32,6 +32,12 @@ export default function GameScreen() {
 
   // Animated token positions
   const displayPositions = useTokenAnimation(gameState);
+
+  // Card dismiss state — player can tap the board to hide the action card
+  const [cardDismissed, setCardDismissed] = useState(false);
+
+  // Reset dismiss whenever the turn or phase changes (new action = fresh card)
+  useEffect(() => { setCardDismissed(false); }, [gameState?.currentPlayerIndex, gameState?.phase]);
 
   // Player card layout refs for floating text positioning
   const [playerLayouts, setPlayerLayouts] = useState<Record<string, PlayerLayout>>({});
@@ -69,6 +75,12 @@ export default function GameScreen() {
   const accentColor   = currentPlayer?.color ?? PALETTE.goldLight;
   const prop          = myPlayer ? gameState.properties[String(myPlayer.position)] : null;
   const tileOwner     = prop?.ownerId ? gameState.players[prop.ownerId] : null;
+
+  // Mirror PurchaseModal's own visibility logic so we can drive the peek bar
+  const showPurchaseCard = isMyTurn && canBuy && gameState.phase === 'action';
+  const showEndTurnCard  = isMyTurn && !showPurchaseCard &&
+    (gameState.phase === 'end_turn' || gameState.phase === 'action');
+  const cardActive = showPurchaseCard || showEndTurnCard;
 
   const turnLabel = isMyTurn
     ? gameState.phase === 'roll'   ? 'Your Turn — Roll!'
@@ -138,10 +150,35 @@ export default function GameScreen() {
 
       </View>
 
-      {/* ── Board ── */}
-      <View style={s.boardArea}>
+      {/* ── Board ── tap empty space to dismiss action card */}
+      <Pressable
+        style={s.boardArea}
+        onPress={() => { if (cardActive && !cardDismissed) setCardDismissed(true); }}
+      >
         <BoardView gameState={gameState} displayPositions={displayPositions} />
-      </View>
+
+        {/* Peek bar: shows when card is dismissed so player can still act */}
+        {cardDismissed && cardActive && (
+          <View style={s.peekBar}>
+            {showPurchaseCard && (
+              <TouchableOpacity
+                style={s.peekOpen}
+                onPress={() => setCardDismissed(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={s.peekOpenTxt}>↑  View Offer</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={s.peekEnd}
+              onPress={handleEndTurn}
+              activeOpacity={0.8}
+            >
+              <Text style={s.peekEndTxt}>{showPurchaseCard ? 'Pass  →' : 'End Turn  →'}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </Pressable>
 
       {/* ── Footer ── */}
       <View style={s.footer}>
@@ -214,6 +251,7 @@ export default function GameScreen() {
         canBuy={canBuy}
         isMyTurn={isMyTurn}
         playerMoney={myPlayer?.money ?? 0}
+        dismissed={cardDismissed}
         onBuy={handleBuyProperty}
         onEndTurn={handleEndTurn}
       />
@@ -282,6 +320,38 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
+  // Peek bar — shown at bottom of board when action card is dismissed
+  peekBar: {
+    position: 'absolute',
+    bottom: 10,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  peekOpen: {
+    flex: 1,
+    backgroundColor: PALETTE.goldLight,
+    borderRadius: 14,
+    paddingVertical: 9,
+    alignItems: 'center',
+    shadowColor: PALETTE.goldLight,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  peekOpenTxt: { color: '#1A1000', fontSize: 13, fontWeight: '900' },
+  peekEnd: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: PALETTE.muted,
+    borderRadius: 14,
+    paddingVertical: 9,
+    alignItems: 'center',
+  },
+  peekEndTxt: { color: PALETTE.text, fontSize: 13, fontWeight: '700' },
 
   // Footer
   footer: {

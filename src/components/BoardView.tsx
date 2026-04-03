@@ -9,7 +9,7 @@ import {
 
 // ── Board geometry ─────────────────────────────────────────────────────────
 const SW = Dimensions.get('window').width;
-const BS = Math.min(SW - 20, 352);         // capped so web doesn't blow up
+const BS = Math.min(SW - 20, 390);         // capped so web doesn't blow up
 const C  = Math.round(BS * 0.18);          // corner tile
 const S  = Math.floor((BS - C * 2) / 6);  // side tile narrow dim
 

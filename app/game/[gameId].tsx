@@ -13,6 +13,12 @@ import { FloatingText, useFloatingTransactions, PlayerLayout } from '../../src/c
 import { TurnTimer } from '../../src/components/TurnTimer';
 import { PALETTE, GROUP_COLORS } from '../../src/game/boardData';
 
+function fmtMoney(m: number): string {
+  if (m < 0) return `-${fmtMoney(-m)}`;
+  if (m >= 1000) return `${+(m / 1000).toFixed(1)}k`;
+  return String(m);
+}
+
 export default function GameScreen() {
   const { gameId } = useLocalSearchParams<{ gameId: string }>();
   const { user }   = useAuth();
@@ -115,20 +121,19 @@ export default function GameScreen() {
                     {p.name}{isMe ? ' ✦' : ''}
                   </Text>
                   <Text style={[s.playerMoney, p.isBankrupt && { color: PALETTE.terra }]}>
-                    {p.isBankrupt ? 'OUT' : `${p.money}M`}
+                    {p.isBankrupt ? 'OUT' : fmtMoney(p.money)}
                   </Text>
                 </View>
                 {isActive && <View style={[s.activeDot, { backgroundColor: p.color }]} />}
               </View>
             );
           })}
-        </View>
 
-        <View style={[s.turnPill, { backgroundColor: accentColor + '22', borderColor: accentColor + '66' }]}>
-          <View style={[s.turnPillDot, { backgroundColor: accentColor }]} />
-          <Text style={[s.turnPillText, { color: accentColor }]} numberOfLines={1}>
-            {turnLabel}
-          </Text>
+          {/* Turn chip — right-aligned in the same row as player cards */}
+          <View style={[s.turnChip, { backgroundColor: accentColor + '22', borderColor: accentColor + '55' }]}>
+            <View style={[s.chipDot, { backgroundColor: accentColor }]} />
+            <Text style={[s.chipText, { color: accentColor }]} numberOfLines={1}>{turnLabel}</Text>
+          </View>
         </View>
 
       </View>
@@ -244,10 +249,9 @@ const s = StyleSheet.create({
   header: {
     paddingTop: Platform.OS === 'ios' ? 52 : 26,
     paddingHorizontal: 12,
-    paddingBottom: 8,
-    gap: 8,
+    paddingBottom: 6,
   },
-  playerRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  playerRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'center' },
   playerCard: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: '#13132B', borderRadius: 14,
@@ -262,20 +266,21 @@ const s = StyleSheet.create({
   playerMoney:  { color: '#2ECC71',     fontSize: 11, fontWeight: '700' },
   activeDot:    { width: 7, height: 7, borderRadius: 4, marginLeft: 2, shadowOpacity: 0.9, shadowRadius: 4 },
 
-  turnPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    alignSelf: 'flex-start', borderRadius: 20, borderWidth: 1,
-    paddingHorizontal: 12, paddingVertical: 5,
+  // Turn chip — inline with player cards
+  turnChip: {
+    marginLeft: 'auto',
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderRadius: 16, borderWidth: 1,
+    paddingHorizontal: 10, paddingVertical: 5,
   },
-  turnPillDot:  { width: 7, height: 7, borderRadius: 4 },
-  turnPillText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.3 },
+  chipDot:  { width: 6, height: 6, borderRadius: 3 },
+  chipText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
 
-  // Board
+  // Board — centered so any leftover space splits above & below the board
   boardArea: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 4,
+    justifyContent: 'center',
   },
 
   // Footer
@@ -287,7 +292,7 @@ const s = StyleSheet.create({
   },
   tileCard: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 10,
+    paddingHorizontal: 16, paddingVertical: 8,
     borderBottomWidth: 1, borderBottomColor: '#1A1A36',
     borderLeftWidth: 4, borderLeftColor: PALETTE.muted, gap: 10,
   },

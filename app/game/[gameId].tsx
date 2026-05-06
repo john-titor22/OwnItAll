@@ -16,6 +16,8 @@ import { WinOverlay } from '../../src/components/WinOverlay';
 import { BankruptOverlay } from '../../src/components/BankruptOverlay';
 import { PropertiesSheet } from '../../src/components/PropertiesSheet';
 import { leaveGame } from '../../src/firebase/gameService';
+import { useSoundEffects } from '../../src/hooks/useSoundEffects';
+import { gameAudio } from '../../src/audio/gameAudio';
 import { PALETTE, GROUP_COLORS } from '../../src/game/boardData';
 
 const SESSION_KEY = 'ownitall_session';
@@ -59,6 +61,7 @@ export default function GameScreen() {
 
 
   const [showProperties, setShowProperties] = useState(false);
+  const { muted, toggleMute } = useSoundEffects(gameState, uid);
 
   // Show bankrupt overlay once when the player goes out
   const [showBankruptOverlay, setShowBankruptOverlay] = useState(false);
@@ -199,9 +202,18 @@ export default function GameScreen() {
             <View style={[s.chipDot, { backgroundColor: accentColor }]} />
             <Text style={[s.chipText, { color: accentColor }]} numberOfLines={1}>{turnLabel}</Text>
           </View>
-          <TouchableOpacity style={s.leaveBtn} onPress={handleLeave} activeOpacity={0.7}>
-            <Text style={s.leaveTxt}>Leave</Text>
-          </TouchableOpacity>
+          <View style={s.chipActions}>
+            <TouchableOpacity
+              style={s.muteBtn}
+              onPress={() => { gameAudio.unlock(); toggleMute(); }}
+              activeOpacity={0.7}
+            >
+              <Text style={s.muteTxt}>{muted ? '🔇' : '🔊'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.leaveBtn} onPress={handleLeave} activeOpacity={0.7}>
+              <Text style={s.leaveTxt}>Leave</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
       </View>
@@ -297,7 +309,7 @@ export default function GameScreen() {
             upgradableTiles={upgradableTiles}
             gameState={gameState}
             myId={uid}
-            onRoll={handleRollDice}
+            onRoll={() => { gameAudio.unlock(); handleRollDice(); }}
             onBuy={handleBuyProperty}
             onEndTurn={handleEndTurn}
             onUpgrade={handleUpgrade}
@@ -410,6 +422,15 @@ const s = StyleSheet.create({
     borderRadius: 16, borderWidth: 1,
     paddingHorizontal: 10, paddingVertical: 4,
   },
+  chipActions: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+  },
+  muteBtn: {
+    paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: 12, borderWidth: 1,
+    borderColor: PALETTE.muted + '44',
+  },
+  muteTxt: { fontSize: 14 },
   leaveBtn: {
     paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: 12, borderWidth: 1,

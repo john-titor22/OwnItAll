@@ -11,7 +11,17 @@
     "android": { "adaptiveIcon": { "backgroundColor": "#1a1a2e" } },
     "platforms": ["ios", "android", "web"],
     "plugins": ["expo-router"],
-    "web": { "bundler": "metro", "output": "single" },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "name": "Own It All",
+      "shortName": "OwnItAll",
+      "description": "Marrakech Edition — multiplayer property trading game",
+      "themeColor": "#C9A84C",
+      "backgroundColor": "#0A0A16",
+      "display": "standalone",
+      "orientation": "portrait"
+    },
     "experiments": { "typedRoutes": true }
   }
 }

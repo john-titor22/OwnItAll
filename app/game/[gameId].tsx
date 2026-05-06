@@ -14,6 +14,7 @@ import { TurnTimer } from '../../src/components/TurnTimer';
 import { ChanceCardOverlay } from '../../src/components/ChanceCardOverlay';
 import { WinOverlay } from '../../src/components/WinOverlay';
 import { BankruptOverlay } from '../../src/components/BankruptOverlay';
+import { PropertiesSheet } from '../../src/components/PropertiesSheet';
 import { leaveGame } from '../../src/firebase/gameService';
 import { PALETTE, GROUP_COLORS } from '../../src/game/boardData';
 
@@ -34,7 +35,7 @@ export default function GameScreen() {
     gameState, loading, isMyTurn, myPlayer, currentTile,
     canBuy, upgradableTiles,
     handleRollDice, handleBuyProperty, handleEndTurn, handleUpgrade,
-    handleDismissChanceCard,
+    handleDismissChanceCard, handleSellProperty,
   } = useGameState(gameId, uid);
 
   // Animated token positions
@@ -56,6 +57,8 @@ export default function GameScreen() {
     playerLayouts,
   );
 
+
+  const [showProperties, setShowProperties] = useState(false);
 
   // Show bankrupt overlay once when the player goes out
   const [showBankruptOverlay, setShowBankruptOverlay] = useState(false);
@@ -280,6 +283,11 @@ export default function GameScreen() {
           />
         )}
 
+        {/* Properties overview — always visible */}
+        <TouchableOpacity style={s.propBtn} onPress={() => setShowProperties(true)} activeOpacity={0.8}>
+          <Text style={s.propBtnTxt}>🏠  Properties</Text>
+        </TouchableOpacity>
+
         {/* Roll Dice + Riad buttons; Buy + End Turn are in PurchaseModal */}
         {isMyTurn && (
           <GameControls
@@ -330,6 +338,15 @@ export default function GameScreen() {
           : null}
         onPlayAgain={() => router.replace('/')}
         onHome={() => router.replace('/')}
+      />
+
+      {/* Properties sheet */}
+      <PropertiesSheet
+        visible={showProperties}
+        gameState={gameState}
+        myId={uid}
+        onClose={() => setShowProperties(false)}
+        onSell={(tileId) => { handleSellProperty(tileId); setShowProperties(false); }}
       />
 
       {/* Bankrupt exit flow */}
@@ -483,5 +500,20 @@ const s = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#1A1A36',
     paddingBottom: Platform.OS === 'ios' ? 22 : 8,
+  },
+  propBtn: {
+    marginHorizontal: 12,
+    marginTop: 6,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#2A2A4A',
+    alignItems: 'center',
+  },
+  propBtnTxt: {
+    color: PALETTE.sand,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 });

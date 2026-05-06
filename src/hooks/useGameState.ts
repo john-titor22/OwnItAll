@@ -349,6 +349,26 @@ export function useGameState(gameId: string, playerId: string) {
     });
   }, [gameState, isMyTurn, playerId, gameId]);
 
+  // ── Sell property ───────────────────────────────────────────────────────
+  const handleSellProperty = useCallback(async (tileId: number) => {
+    if (!gameState) return;
+    const player = gameState.players[playerId];
+    const tile   = BOARD[tileId];
+    const prop   = gameState.properties[String(tileId)];
+    if (!prop || prop.ownerId !== playerId) return;
+
+    const price = Math.round(((tile.price ?? 0) + (prop.level ?? 0) * (tile.riadCost ?? 0)) / 2);
+    const log   = [...gameState.log, `${player.name} sold ${tile.name} for ${price} MAD`];
+
+    await patchGame(gameId, {
+      [`players/${playerId}/money`]:                    player.money + price,
+      [`players/${playerId}/ownedProperties/${tileId}`]: null,
+      [`properties/${tileId}/ownerId`]:                 '',
+      [`properties/${tileId}/level`]:                   0,
+      log,
+    });
+  }, [gameState, playerId, gameId]);
+
   // ── Computed helpers ────────────────────────────────────────────────────
   const currentTile = myPlayer ? BOARD[myPlayer.position] : null;
 
@@ -377,5 +397,6 @@ export function useGameState(gameId: string, playerId: string) {
     handleEndTurn,
     handleUpgrade,
     handleDismissChanceCard,
+    handleSellProperty,
   };
 }

@@ -14,7 +14,7 @@ export function ChanceCardOverlay({ card, isMyTurn, onDismiss }: Props) {
     <Modal visible transparent animationType="fade">
       <View style={s.backdrop}>
         <View style={s.card}>
-          <Text style={s.label}>Z3RK</Text>
+          <Text style={s.label}>ZEHRK</Text>
           <Text style={s.emoji}>{card.emoji}</Text>
           <Text style={s.text}>{card.text}</Text>
           {isMyTurn ? (

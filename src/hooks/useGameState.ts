@@ -105,25 +105,25 @@ export function useGameState(gameId: string, playerId: string) {
       switch (card.effect.type) {
         case 'collect':
           patch[`players/${playerId}/money`] = money + card.effect.amount;
-          log.push(`${player.name} drew Z3rk ${card.emoji} — collected ${card.effect.amount} MAD`);
+          log.push(`${player.name} drew zehrk ${card.emoji} — collected ${card.effect.amount} MAD`);
           break;
         case 'pay': {
           const afterPay = money - card.effect.amount;
           patch[`players/${playerId}/money`] = afterPay;
           if (afterPay < 0) Object.assign(patch, buildBankruptPatches(playerId, gameState.properties));
-          log.push(`${player.name} drew Z3rk ${card.emoji} — paid ${card.effect.amount} MAD`);
+          log.push(`${player.name} drew zehrk ${card.emoji} — paid ${card.effect.amount} MAD`);
           break;
         }
         case 'go_to_jail':
           patch[`players/${playerId}/position`]  = JAIL_TILE;
           patch[`players/${playerId}/inJail`]    = true;
           patch[`players/${playerId}/jailTurns`] = 0;
-          log.push(`${player.name} drew Z3rk ${card.emoji} — sent to jail!`);
+          log.push(`${player.name} drew zehrk ${card.emoji} — sent to jail!`);
           break;
         case 'move_back': {
           const newPos = ((position - card.effect.steps) + BOARD_SIZE) % BOARD_SIZE;
           patch[`players/${playerId}/position`] = newPos;
-          log.push(`${player.name} drew Z3rk ${card.emoji} — moved back ${card.effect.steps} spaces`);
+          log.push(`${player.name} drew zehrk ${card.emoji} — moved back ${card.effect.steps} spaces`);
           break;
         }
         case 'advance_to': {
@@ -135,7 +135,7 @@ export function useGameState(gameId: string, playerId: string) {
           }
           patch[`players/${playerId}/position`] = target;
           patch[`players/${playerId}/money`]    = advanceMoney;
-          log.push(`${player.name} drew Z3rk ${card.emoji} — advanced to ${BOARD[target].name}`);
+          log.push(`${player.name} drew zehrk ${card.emoji} — advanced to ${BOARD[target].name}`);
           break;
         }
         case 'pay_per_riad': {
@@ -146,7 +146,7 @@ export function useGameState(gameId: string, playerId: string) {
           const afterFine = money - fine;
           patch[`players/${playerId}/money`] = afterFine;
           if (afterFine < 0) Object.assign(patch, buildBankruptPatches(playerId, gameState.properties));
-          log.push(`${player.name} drew Z3rk ${card.emoji} — paid ${fine} MAD (${totalLevels}× ${card.effect.amount})`);
+          log.push(`${player.name} drew zehrk ${card.emoji} — paid ${fine} MAD (${totalLevels}× ${card.effect.amount})`);
           break;
         }
       }

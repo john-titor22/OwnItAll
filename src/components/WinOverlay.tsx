@@ -4,11 +4,12 @@ import { Player } from '../game/types';
 import { PALETTE } from '../game/boardData';
 
 interface Props {
-  winner: Player | null;
-  onHome: () => void;
+  winner:       Player | null;
+  onHome:       () => void;
+  onPlayAgain:  () => void;
 }
 
-export function WinOverlay({ winner, onHome }: Props) {
+export function WinOverlay({ winner, onHome, onPlayAgain }: Props) {
   if (!winner) return null;
   return (
     <Modal visible transparent animationType="fade">
@@ -20,8 +21,11 @@ export function WinOverlay({ winner, onHome }: Props) {
           <Text style={s.label}>WINNER</Text>
           <Text style={[s.name, { color: winner.color }]}>{winner.name}</Text>
           <Text style={s.sub}>conquers Marrakech!</Text>
-          <TouchableOpacity style={[s.btn, { backgroundColor: winner.color }]} onPress={onHome} activeOpacity={0.8}>
-            <Text style={s.btnTxt}>Back to Home</Text>
+          <TouchableOpacity style={[s.btn, { backgroundColor: winner.color }]} onPress={onPlayAgain} activeOpacity={0.8}>
+            <Text style={s.btnTxt}>Play Again</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.homeBtn} onPress={onHome} activeOpacity={0.7}>
+            <Text style={s.homeTxt}>Back to Home</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -83,5 +87,14 @@ const s = StyleSheet.create({
     fontSize: 15,
     fontWeight: '900',
     letterSpacing: 0.5,
+  },
+  homeBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  homeTxt: {
+    color: PALETTE.muted,
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

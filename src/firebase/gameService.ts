@@ -63,6 +63,8 @@ export async function createGame(
     createdBy:          hostId,
     createdAt:          Date.now(),
     turnStartedAt:      Date.now(),
+    doublesStreak:      0,
+    parkingPot:         500,
   };
 
   await set(newRef, state);

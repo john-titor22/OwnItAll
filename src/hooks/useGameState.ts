@@ -31,10 +31,11 @@ export function useGameState(gameId: string, playerId: string) {
   const handleRollDice = useCallback(async () => {
     if (!gameState || !isMyTurn || gameState.phase !== 'roll') return;
 
-    const player = { ...gameState.players[playerId] };
-    const dice   = rollDice();
-    const steps  = dice[0] + dice[1];
-    const log    = [...gameState.log];
+    const player    = { ...gameState.players[playerId] };
+    const wasInJail = player.inJail;
+    const dice      = rollDice();
+    const steps     = dice[0] + dice[1];
+    const log       = [...gameState.log];
     const patch: Record<string, unknown> = { diceResult: dice };
 
     // Handle jail
@@ -68,6 +69,32 @@ export function useGameState(gameId: string, playerId: string) {
     const { position, passedGo } = movePlayer(player, steps);
     let money = player.money;
 
+    // ── Doubles streak ────────────────────────────────────────────────────
+    const isDoubles     = dice[0] === dice[1];
+    const escapedJail   = wasInJail && isDoubles;   // no re-roll bonus after jail escape
+    const currentStreak = gameState.doublesStreak ?? 0;
+
+    if (isDoubles && !escapedJail) {
+      if (currentStreak + 1 >= 3) {
+        // Third doubles in a row — go straight to jail, skip tile resolution
+        patch[`players/${playerId}/position`]  = JAIL_TILE;
+        patch[`players/${playerId}/inJail`]    = true;
+        patch[`players/${playerId}/jailTurns`] = 0;
+        patch[`players/${playerId}/money`]     = money;
+        patch[`players/${playerId}/inJail`]    = true;
+        patch['doublesStreak'] = 0;
+        log.push(`${player.name} rolled 3 doubles in a row — sent to jail!`);
+        patch['log'] = log;
+        patch['phase'] = 'end_turn';
+        patch['turnStartedAt'] = Date.now();
+        await patchGame(gameId, patch);
+        return;
+      }
+      patch['doublesStreak'] = currentStreak + 1;
+    } else {
+      patch['doublesStreak'] = 0;
+    }
+
     if (passedGo) {
       money += GO_SALARY;
       log.push(`${player.name} passed Go — collected ${GO_SALARY} MAD`);
@@ -87,15 +114,18 @@ export function useGameState(gameId: string, playerId: string) {
       patch[`players/${playerId}/position`]  = JAIL_TILE;
       patch[`players/${playerId}/inJail`]    = true;
       patch[`players/${playerId}/jailTurns`] = 0;
+      patch['doublesStreak'] = 0;
       log.push(`${player.name} is sent to jail!`);
       nextPhase = 'end_turn';
 
     } else if (tile.type === 'tax') {
       const tax      = tile.taxAmount ?? 0;
       const afterTax = money - tax;
+      const newPot   = (gameState.parkingPot ?? 0) + tax;
       patch[`players/${playerId}/money`] = afterTax;
+      patch['parkingPot'] = newPot;
       if (afterTax < 0) Object.assign(patch, buildBankruptPatches(playerId, gameState.properties));
-      log.push(`${player.name} paid ${tax} MAD in taxes`);
+      log.push(`${player.name} paid ${tax} MAD tax — parking pot now ${newPot} MAD`);
       nextPhase = 'end_turn';
 
     } else if (tile.type === 'chance') {
@@ -152,7 +182,16 @@ export function useGameState(gameId: string, playerId: string) {
       }
       nextPhase = 'end_turn';
 
-    } else if (tile.type === 'free_parking' || tile.type === 'jail' || tile.type === 'go') {
+    } else if (tile.type === 'free_parking') {
+      const pot = gameState.parkingPot ?? 0;
+      if (pot > 0) {
+        patch[`players/${playerId}/money`] = money + pot;
+        patch['parkingPot'] = 0;
+        log.push(`${player.name} collected the parking pot — ${pot} MAD! 🎉`);
+      }
+      nextPhase = 'end_turn';
+
+    } else if (tile.type === 'jail' || tile.type === 'go') {
       nextPhase = 'end_turn';
 
     } else if (tile.type === 'property' || tile.type === 'station') {
@@ -250,6 +289,20 @@ export function useGameState(gameId: string, playerId: string) {
       return;
     }
 
+    // Doubles re-roll — same player rolls again if streak > 0 and not bankrupt
+    const currentPid      = gameState.playerOrder[gameState.currentPlayerIndex];
+    const doublesStreak   = gameState.doublesStreak ?? 0;
+    const currentBankrupt = players[currentPid]?.isBankrupt;
+    if (doublesStreak > 0 && !currentBankrupt) {
+      await patchGame(gameId, {
+        phase:          'roll',
+        diceResult:     null,
+        turnStartedAt:  Date.now(),
+        lastChanceCard: null,
+      });
+      return;
+    }
+
     // Advance to next non-bankrupt player
     let nextIndex = (gameState.currentPlayerIndex + 1) % gameState.playerOrder.length;
     let safety    = 0;
@@ -267,6 +320,7 @@ export function useGameState(gameId: string, playerId: string) {
       phase:              'roll',
       turnStartedAt:      Date.now(),
       lastChanceCard:     null,
+      doublesStreak:      0,
     });
   }, [gameState, isMyTurn, gameId]);
 

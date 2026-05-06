@@ -105,9 +105,9 @@ function TileCell({ id, gs, onPress, side = 'bottom', displayPositions, C }: Til
 }
 
 interface Props {
-  gameState: GameState;
+  gameState:         GameState;
   displayPositions?: Record<string, number>;
-  boardSize?: number;
+  boardSize?:        number;
 }
 
 export function BoardView({ gameState, displayPositions, boardSize }: Props) {
@@ -163,6 +163,16 @@ export function BoardView({ gameState, displayPositions, boardSize }: Props) {
               <Text style={[s.centerSub, { fontSize: Math.round(C * 0.13) }]}>
                 ✦  Marrakech  ✦
               </Text>
+              {(gameState.parkingPot ?? 0) > 0 && (
+                <Text style={[s.centerSub, {
+                  fontSize: Math.round(C * 0.12),
+                  color: '#2ECC71',
+                  marginTop: 4,
+                  fontWeight: '800',
+                }]}>
+                  🅿 {gameState.parkingPot} MAD
+                </Text>
+              )}
             </View>
 
             <View style={{ width: C, height: BS - C * 2, flexDirection: 'column' }}>

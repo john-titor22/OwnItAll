@@ -13,6 +13,7 @@ import { FloatingText, useFloatingTransactions, PlayerLayout } from '../../src/c
 import { TurnTimer } from '../../src/components/TurnTimer';
 import { ChanceCardOverlay } from '../../src/components/ChanceCardOverlay';
 import { WinOverlay } from '../../src/components/WinOverlay';
+import { BankruptOverlay } from '../../src/components/BankruptOverlay';
 import { leaveGame } from '../../src/firebase/gameService';
 import { PALETTE, GROUP_COLORS } from '../../src/game/boardData';
 
@@ -55,6 +56,14 @@ export default function GameScreen() {
     playerLayouts,
   );
 
+
+  // Show bankrupt overlay once when the player goes out
+  const [showBankruptOverlay, setShowBankruptOverlay] = useState(false);
+  useEffect(() => {
+    if (myPlayer?.isBankrupt && gameState?.status === 'playing') {
+      setShowBankruptOverlay(true);
+    }
+  }, [myPlayer?.isBankrupt]);
 
   // Clear stored session when game finishes so resume banner doesn't linger
   useEffect(() => {
@@ -319,7 +328,15 @@ export default function GameScreen() {
         winner={gameState.status === 'finished' && gameState.winnerId
           ? gameState.players[gameState.winnerId] ?? null
           : null}
+        onPlayAgain={() => router.replace('/')}
         onHome={() => router.replace('/')}
+      />
+
+      {/* Bankrupt exit flow */}
+      <BankruptOverlay
+        visible={showBankruptOverlay && gameState.status === 'playing'}
+        onSpectate={() => setShowBankruptOverlay(false)}
+        onLeave={() => { setShowBankruptOverlay(false); handleLeave(); }}
       />
     </View>
   );

@@ -1,5 +1,4 @@
-// Web Audio API sound engine — no dependencies, no CDN, works offline
-// All sounds synthesized from scratch using oscillators + noise.
+// Audio engine — real recordings for dice, synthesized for everything else.
 
 export type SoundKey =
   | 'dice'
@@ -81,11 +80,8 @@ function sweep(
 
 const SOUNDS: Record<SoundKey, (ac: AudioContext) => void> = {
 
-  dice: (ac) => {
-    // White-noise rattle with a brief pitch hit
-    noise(ac, 0.35, 0.4, 0.18);
-    tone(ac, 220, 'triangle', 0,    0.12, 0.25);
-    tone(ac, 160, 'triangle', 0.12, 0.12, 0.2);
+  dice: (_ac) => {
+    // Handled by real recordings — fallback only if Audio API unavailable
   },
 
   collect: (ac) => {
@@ -162,11 +158,30 @@ const SOUNDS: Record<SoundKey, (ac: AudioContext) => void> = {
   },
 };
 
+// ── Real recordings ────────────────────────────────────────────────────────
+// CC0 — Freesound previews CDN (no auth required for preview URLs)
+// Roll: "Dice Rolling Sound - WOOD SURFACE" by Christopherderp (#342202)
+// Impact: "Dice Roll - Impact Organic Wood" by ryusa (#467583)
+const DICE_ROLL_URL   = 'https://cdn.freesound.org/previews/342/342202_3908740-hq.mp3';
+const DICE_IMPACT_URL = 'https://cdn.freesound.org/previews/467/467583_9892063-hq.mp3';
+
+function makeAudio(url: string): HTMLAudioElement | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const el = new Audio(url);
+    el.preload = 'auto';
+    return el;
+  } catch { return null; }
+}
+
 // ── Singleton audio engine ─────────────────────────────────────────────────
 
 class GameAudioEngine {
-  private ac:     AudioContext | null = null;
-  private muted:  boolean = false;
+  private ac:          AudioContext | null = null;
+  private muted:       boolean = false;
+  private diceRoll:    HTMLAudioElement | null = makeAudio(DICE_ROLL_URL);
+  private diceImpact:  HTMLAudioElement | null = makeAudio(DICE_IMPACT_URL);
+  private impactTimer: ReturnType<typeof setTimeout> | null = null;
 
   private getCtx(): AudioContext | null {
     if (typeof window === 'undefined') return null;
@@ -176,26 +191,65 @@ class GameAudioEngine {
         if (!AC) return null;
         this.ac = new AC();
       }
-      if (this.ac.state === 'suspended') {
-        void this.ac.resume();
-      }
+      if (this.ac.state === 'suspended') void this.ac.resume();
       return this.ac;
-    } catch {
-      return null;
+    } catch { return null; }
+  }
+
+  private playDiceReal() {
+    // Cancel any pending impact from a previous fast roll
+    if (this.impactTimer) clearTimeout(this.impactTimer);
+
+    const roll   = this.diceRoll;
+    const impact = this.diceImpact;
+
+    if (roll) {
+      roll.currentTime = 0;
+      roll.volume = 0.9;
+      roll.play().catch(() => this.playSynth('dice'));
+    } else {
+      this.playSynth('dice');
+      return;
+    }
+
+    // Layer the short impact clack ~700 ms into the roll for a realistic landing
+    if (impact) {
+      this.impactTimer = setTimeout(() => {
+        impact.currentTime = 0;
+        impact.volume = 0.7;
+        impact.play().catch(() => {});
+        this.impactTimer = null;
+      }, 700);
     }
   }
 
-  play(key: SoundKey) {
-    if (this.muted) return;
+  private playSynth(key: SoundKey) {
     const ac = this.getCtx();
     if (!ac) return;
     try { SOUNDS[key](ac); } catch { /* silent */ }
   }
 
-  setMuted(v: boolean) { this.muted = v; }
-  isMuted()            { return this.muted; }
+  play(key: SoundKey) {
+    if (this.muted) return;
+    if (key === 'dice') {
+      this.playDiceReal();
+      return;
+    }
+    this.playSynth(key);
+  }
 
-  // Call from any user-gesture handler to unlock iOS Safari
+  setMuted(v: boolean) {
+    this.muted = v;
+    // Stop any in-progress dice audio immediately on mute
+    if (v) {
+      this.diceRoll?.pause();
+      this.diceImpact?.pause();
+      if (this.impactTimer) { clearTimeout(this.impactTimer); this.impactTimer = null; }
+    }
+  }
+  isMuted() { return this.muted; }
+
+  // Call from any user-gesture handler to unlock iOS Safari AudioContext
   unlock() { this.getCtx(); }
 }
 

@@ -4,8 +4,10 @@ import { GameState } from '../game/types';
 import {
   rollDice, movePlayer, calculateRent, calculateStationRent,
   canBuyProperty, canUpgradeTile, getWinnerId,
+  buildBankruptPatches, computeNetWorth,
 } from '../game/gameEngine';
 import { BOARD, BOARD_SIZE, GO_SALARY, JAIL_TILE } from '../game/boardData';
+import { drawChanceCard } from '../game/chanceCards';
 
 export function useGameState(gameId: string, playerId: string) {
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -89,15 +91,65 @@ export function useGameState(gameId: string, playerId: string) {
       nextPhase = 'end_turn';
 
     } else if (tile.type === 'tax') {
-      const tax = tile.taxAmount ?? 0;
-      patch[`players/${playerId}/money`] = money - tax;
+      const tax      = tile.taxAmount ?? 0;
+      const afterTax = money - tax;
+      patch[`players/${playerId}/money`] = afterTax;
+      if (afterTax < 0) Object.assign(patch, buildBankruptPatches(playerId, gameState.properties));
       log.push(`${player.name} paid ${tax} MAD in taxes`);
       nextPhase = 'end_turn';
 
     } else if (tile.type === 'chance') {
-      const bonus = 50;
-      patch[`players/${playerId}/money`] = money + bonus;
-      log.push(`${player.name} drew Chance — collected ${bonus} MAD bonus!`);
+      const card = drawChanceCard();
+      patch['lastChanceCard'] = { id: card.id, text: card.text, emoji: card.emoji };
+
+      switch (card.effect.type) {
+        case 'collect':
+          patch[`players/${playerId}/money`] = money + card.effect.amount;
+          log.push(`${player.name} drew Z3rk ${card.emoji} — collected ${card.effect.amount} MAD`);
+          break;
+        case 'pay': {
+          const afterPay = money - card.effect.amount;
+          patch[`players/${playerId}/money`] = afterPay;
+          if (afterPay < 0) Object.assign(patch, buildBankruptPatches(playerId, gameState.properties));
+          log.push(`${player.name} drew Z3rk ${card.emoji} — paid ${card.effect.amount} MAD`);
+          break;
+        }
+        case 'go_to_jail':
+          patch[`players/${playerId}/position`]  = JAIL_TILE;
+          patch[`players/${playerId}/inJail`]    = true;
+          patch[`players/${playerId}/jailTurns`] = 0;
+          log.push(`${player.name} drew Z3rk ${card.emoji} — sent to jail!`);
+          break;
+        case 'move_back': {
+          const newPos = ((position - card.effect.steps) + BOARD_SIZE) % BOARD_SIZE;
+          patch[`players/${playerId}/position`] = newPos;
+          log.push(`${player.name} drew Z3rk ${card.emoji} — moved back ${card.effect.steps} spaces`);
+          break;
+        }
+        case 'advance_to': {
+          const target = card.effect.tileId;
+          let advanceMoney = money;
+          if (target < position) {
+            advanceMoney += GO_SALARY;
+            log.push(`${player.name} passed Go — collected ${GO_SALARY} MAD`);
+          }
+          patch[`players/${playerId}/position`] = target;
+          patch[`players/${playerId}/money`]    = advanceMoney;
+          log.push(`${player.name} drew Z3rk ${card.emoji} — advanced to ${BOARD[target].name}`);
+          break;
+        }
+        case 'pay_per_riad': {
+          const totalLevels = Object.values(gameState.properties)
+            .filter(p => p.ownerId === playerId)
+            .reduce((sum, p) => sum + (p.level ?? 0), 0);
+          const fine = totalLevels * card.effect.amount;
+          const afterFine = money - fine;
+          patch[`players/${playerId}/money`] = afterFine;
+          if (afterFine < 0) Object.assign(patch, buildBankruptPatches(playerId, gameState.properties));
+          log.push(`${player.name} drew Z3rk ${card.emoji} — paid ${fine} MAD (${totalLevels}× ${card.effect.amount})`);
+          break;
+        }
+      }
       nextPhase = 'end_turn';
 
     } else if (tile.type === 'free_parking' || tile.type === 'jail' || tile.type === 'go') {
@@ -128,7 +180,7 @@ export function useGameState(gameId: string, playerId: string) {
           patch[`players/${ownerId}/money`]  = ownerPlayer.money + rent;
 
           if (money - rent < 0) {
-            patch[`players/${playerId}/isBankrupt`] = true;
+            Object.assign(patch, buildBankruptPatches(playerId, gameState.properties));
             log.push(`${player.name} went bankrupt paying ${rent} MAD rent to ${ownerPlayer.name}!`);
           } else {
             log.push(`${player.name} paid ${rent} MAD rent to ${ownerPlayer.name}`);
@@ -172,13 +224,28 @@ export function useGameState(gameId: string, playerId: string) {
 
     const players = gameState.players;
 
-    // Check for winner first
+    // Time cap — 45 min from game start → richest non-bankrupt player wins
+    const TIME_CAP_MS = 30 * 60 * 1000;
+    if (gameState.gameStartedAt && Date.now() - gameState.gameStartedAt > TIME_CAP_MS) {
+      const active  = gameState.playerOrder.map(pid => players[pid]).filter(p => p && !p.isBankrupt);
+      const richest = active.reduce((best, p) =>
+        computeNetWorth(p, gameState.properties) > computeNetWorth(best, gameState.properties) ? p : best
+      );
+      await patchGame(gameId, {
+        status:   'finished',
+        winnerId: richest.id,
+        log: [...gameState.log, `Time's up! ${richest.name} wins with the highest net worth!`],
+      });
+      return;
+    }
+
+    // Last player standing wins
     const winnerId = getWinnerId(players);
     if (winnerId) {
       await patchGame(gameId, {
         status:   'finished',
         winnerId,
-        log: [...gameState.log, `${players[winnerId].name} wins the game!`],
+        log: [...gameState.log, `${players[winnerId].name} wins Marrakech!`],
       });
       return;
     }
@@ -199,7 +266,14 @@ export function useGameState(gameId: string, playerId: string) {
       diceResult:         null,
       phase:              'roll',
       turnStartedAt:      Date.now(),
+      lastChanceCard:     null,
     });
+  }, [gameState, isMyTurn, gameId]);
+
+  // ── Dismiss chance card overlay ─────────────────────────────────────────
+  const handleDismissChanceCard = useCallback(async () => {
+    if (!gameState || !isMyTurn) return;
+    await patchGame(gameId, { lastChanceCard: null });
   }, [gameState, isMyTurn, gameId]);
 
   // ── Build Riad ──────────────────────────────────────────────────────────
@@ -248,5 +322,6 @@ export function useGameState(gameId: string, playerId: string) {
     handleBuyProperty,
     handleEndTurn,
     handleUpgrade,
+    handleDismissChanceCard,
   };
 }

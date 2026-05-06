@@ -53,7 +53,7 @@ export default function LobbyScreen() {
       </View>
 
       <View style={styles.body}>
-        <Text style={styles.sectionLabel}>PLAYERS  {playerCount} / 4</Text>
+        <Text style={styles.sectionLabel}>PLAYERS  {playerCount} / 6</Text>
 
         {game.playerOrder.map((pid) => {
           const p = game.players[pid];

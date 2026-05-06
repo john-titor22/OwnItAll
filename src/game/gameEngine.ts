@@ -98,3 +98,33 @@ export function getWinnerId(
   const active = getActivePlayerIds(players);
   return active.length === 1 ? active[0] : null;
 }
+
+export function computeNetWorth(
+  player: Player,
+  properties: Record<string, PropertyState>
+): number {
+  let worth = player.money;
+  Object.keys(player.ownedProperties ?? {}).forEach(tileId => {
+    const tile = BOARD[Number(tileId)];
+    const prop = properties[tileId];
+    if (tile && prop) worth += (tile.price ?? 0) + prop.level * (tile.riadCost ?? 0);
+  });
+  return worth;
+}
+
+export function buildBankruptPatches(
+  playerId: string,
+  properties: Record<string, PropertyState>
+): Record<string, unknown> {
+  const patches: Record<string, unknown> = {
+    [`players/${playerId}/isBankrupt`]:      true,
+    [`players/${playerId}/ownedProperties`]: {},
+  };
+  Object.entries(properties).forEach(([tileId, prop]) => {
+    if (prop.ownerId === playerId) {
+      patches[`properties/${tileId}/ownerId`] = '';
+      patches[`properties/${tileId}/level`]   = 0;
+    }
+  });
+  return patches;
+}

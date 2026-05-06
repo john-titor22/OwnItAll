@@ -62,6 +62,8 @@ export interface GameState {
   phase: GamePhase;
   winnerId?: string;
   createdBy: string;
-  createdAt?: number;      // ms timestamp — used for lobby auto-close
-  turnStartedAt?: number;  // ms timestamp — resets on each turn change
+  createdAt?: number;       // ms timestamp — used for lobby auto-close
+  turnStartedAt?: number;   // ms timestamp — resets on each turn change
+  gameStartedAt?: number;   // ms timestamp — set when game starts, used for time cap
+  lastChanceCard?: { id: number; text: string; emoji: string }; // shown as overlay to all players
 }

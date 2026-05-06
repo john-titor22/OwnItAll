@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Alert, Platform, Pressable, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable, TouchableOpacity, Dimensions } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useAuth }            from '../../src/hooks/useAuth';
 import { useGameState }       from '../../src/hooks/useGameState';
@@ -10,6 +10,8 @@ import { DiceRollOverlay }    from '../../src/components/DiceRollOverlay';
 import { PurchaseModal }      from '../../src/components/PurchaseModal';
 import { FloatingText, useFloatingTransactions, PlayerLayout } from '../../src/components/FloatingText';
 import { TurnTimer } from '../../src/components/TurnTimer';
+import { ChanceCardOverlay } from '../../src/components/ChanceCardOverlay';
+import { WinOverlay } from '../../src/components/WinOverlay';
 import { PALETTE, GROUP_COLORS } from '../../src/game/boardData';
 
 function fmtMoney(m: number): string {
@@ -27,6 +29,7 @@ export default function GameScreen() {
     gameState, loading, isMyTurn, myPlayer, currentTile,
     canBuy, upgradableTiles,
     handleRollDice, handleBuyProperty, handleEndTurn, handleUpgrade,
+    handleDismissChanceCard,
   } = useGameState(gameId, uid);
 
   // Animated token positions
@@ -34,6 +37,9 @@ export default function GameScreen() {
 
   // Card dismiss state — player can tap the board to hide the action card
   const [cardDismissed, setCardDismissed] = useState(false);
+
+  // Board area layout — used to size the board dynamically
+  const [boardAreaDims, setBoardAreaDims] = useState({ w: 0, h: 0 });
 
   // Reset dismiss whenever the turn or phase changes (new action = fresh card)
   useEffect(() => { setCardDismissed(false); }, [gameState?.currentPlayerIndex, gameState?.phase]);
@@ -45,15 +51,6 @@ export default function GameScreen() {
     playerLayouts,
   );
 
-  useEffect(() => {
-    if (gameState?.status !== 'finished') return;
-    const winner = gameState.winnerId
-      ? gameState.players[gameState.winnerId]?.name ?? 'Unknown'
-      : 'Unknown';
-    Alert.alert('Game Over!', `${winner} wins Marrakech!`, [
-      { text: 'Back to Home', onPress: () => router.replace('/') },
-    ]);
-  }, [gameState?.status]);
 
   // Auto-action when turn timer expires (only fires for the active player)
   function handleTimerExpire() {
@@ -86,6 +83,18 @@ export default function GameScreen() {
     : gameState.phase === 'action' ? 'Your Turn — Act'
     :                                'Your Turn — End'
     : `${currentPlayer?.name ?? '…'}'s Turn`;
+
+  // Purchase modal approximates ~310px tall; end-turn ~96px
+  const PURCHASE_MODAL_H = 310;
+  const END_TURN_MODAL_H = 96;
+  const activeModalH =
+    showPurchaseCard && !cardDismissed ? PURCHASE_MODAL_H :
+    showEndTurnCard  && !cardDismissed ? END_TURN_MODAL_H : 0;
+
+  // Board fills the available space minus the modal height
+  const boardSize = boardAreaDims.w > 0
+    ? Math.max(160, Math.min(boardAreaDims.w - 8, boardAreaDims.h - activeModalH - 12))
+    : undefined;
 
   return (
     <View style={s.root}>
@@ -173,7 +182,7 @@ export default function GameScreen() {
           {/* Log entries — 2 lines, very muted */}
           {[...(Array.isArray(gameState.log)
             ? gameState.log
-            : Object.values(gameState.log ?? {})
+            : Object.values(gameState.log ?? {}) as string[]
           )].reverse().slice(0, 2).map((entry, i) => (
             <Text key={i} style={[s.infoLog, i === 0 && s.infoLogNewest]} numberOfLines={1}>
               {i === 0 ? '▸ ' : '  '}{entry}
@@ -185,9 +194,13 @@ export default function GameScreen() {
       {/* ── Board ── tap empty space to dismiss action card */}
       <Pressable
         style={s.boardArea}
+        onLayout={e => {
+          const { width, height } = e.nativeEvent.layout;
+          setBoardAreaDims({ w: width, h: height });
+        }}
         onPress={() => { if (cardActive && !cardDismissed) setCardDismissed(true); }}
       >
-        <BoardView gameState={gameState} displayPositions={displayPositions} />
+        <BoardView gameState={gameState} displayPositions={displayPositions} boardSize={boardSize} />
 
         {/* Peek bar: shows when card is dismissed so player can still act */}
         {cardDismissed && cardActive && (
@@ -258,6 +271,21 @@ export default function GameScreen() {
 
       {/* Floating transaction text */}
       <FloatingText items={floatItems} onDone={removeFloat} />
+
+      {/* Chance card overlay — shown to all players until active player dismisses */}
+      <ChanceCardOverlay
+        card={gameState.lastChanceCard}
+        isMyTurn={isMyTurn}
+        onDismiss={handleDismissChanceCard}
+      />
+
+      {/* Win screen */}
+      <WinOverlay
+        winner={gameState.status === 'finished' && gameState.winnerId
+          ? gameState.players[gameState.winnerId] ?? null
+          : null}
+        onHome={() => router.replace('/')}
+      />
     </View>
   );
 }
@@ -315,11 +343,11 @@ const s = StyleSheet.create({
   chipDot:  { width: 6, height: 6, borderRadius: 3 },
   chipText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
 
-  // Board — centered so any leftover space splits above & below the board
   boardArea: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 6,
   },
 
   // Peek bar — shown at bottom of board when action card is dismissed

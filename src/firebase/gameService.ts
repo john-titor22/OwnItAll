@@ -80,7 +80,7 @@ export async function joinGame(
 
   const game: GameState = snapshot.val();
   if (game.status !== 'waiting')                    throw new Error('Game already started');
-  if (Object.keys(game.players).length >= 4)        throw new Error('Game is full (max 4 players)');
+  if (Object.keys(game.players).length >= 6)        throw new Error('Game is full (max 6 players)');
   if (game.players[playerId])                       throw new Error('You are already in this game');
 
   const colorIndex = Object.keys(game.players).length;
@@ -94,7 +94,8 @@ export async function joinGame(
 }
 
 export async function startGame(gameId: string): Promise<void> {
-  await update(ref(db, `games/${gameId}`), { status: 'playing', turnStartedAt: Date.now() });
+  const now = Date.now();
+  await update(ref(db, `games/${gameId}`), { status: 'playing', turnStartedAt: now, gameStartedAt: now });
 }
 
 /**

@@ -5,7 +5,7 @@ import { PALETTE } from '../game/boardData';
 interface Props { log: string[]; }
 
 export function GameLog({ log }: Props) {
-  const entries = [...(Array.isArray(log) ? log : Object.values(log))]
+  const entries = [...(Array.isArray(log) ? log : Object.values(log) as string[])]
     .reverse().slice(0, 2);
 
   return (

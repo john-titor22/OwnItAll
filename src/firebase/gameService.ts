@@ -4,6 +4,7 @@ import {
 import { db } from './config';
 import { GameState, Player, PropertyState } from '../game/types';
 import { BOARD, STARTING_MONEY, PLAYER_COLORS } from '../game/boardData';
+import { buildBankruptPatches } from '../game/gameEngine';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -126,6 +127,65 @@ export async function deleteStaleLobbies(): Promise<void> {
   });
 
   await Promise.all(deletions);
+}
+
+export async function getGame(gameId: string): Promise<GameState | null> {
+  const snap = await get(ref(db, `games/${gameId}`));
+  return snap.exists() ? (snap.val() as GameState) : null;
+}
+
+export async function leaveGame(
+  gameId: string,
+  playerId: string,
+  gameState: GameState
+): Promise<void> {
+  const playerName = gameState.players[playerId]?.name ?? 'A player';
+  const patch: Record<string, unknown> = {
+    ...buildBankruptPatches(playerId, gameState.properties),
+  };
+  const log = [...gameState.log, `${playerName} left the game`];
+
+  // If only 1 active player remains after leaving, end the game
+  const remainingActive = gameState.playerOrder
+    .filter(pid => pid !== playerId && !gameState.players[pid]?.isBankrupt);
+
+  if (remainingActive.length === 1) {
+    const winnerId = remainingActive[0];
+    await patchGame(gameId, {
+      ...patch,
+      status: 'finished',
+      winnerId,
+      log: [...log, `${gameState.players[winnerId].name} wins Marrakech!`],
+    });
+    return;
+  }
+
+  // If it's the leaving player's turn, advance to the next player
+  const isCurrentPlayer =
+    gameState.playerOrder[gameState.currentPlayerIndex] === playerId;
+  if (isCurrentPlayer) {
+    const tempPlayers = {
+      ...gameState.players,
+      [playerId]: { ...gameState.players[playerId], isBankrupt: true },
+    };
+    let nextIndex = (gameState.currentPlayerIndex + 1) % gameState.playerOrder.length;
+    let safety = 0;
+    while (
+      tempPlayers[gameState.playerOrder[nextIndex]]?.isBankrupt &&
+      safety < gameState.playerOrder.length
+    ) {
+      nextIndex = (nextIndex + 1) % gameState.playerOrder.length;
+      safety++;
+    }
+    patch['currentPlayerIndex'] = nextIndex;
+    patch['phase']              = 'roll';
+    patch['diceResult']         = null;
+    patch['turnStartedAt']      = Date.now();
+    patch['lastChanceCard']     = null;
+  }
+
+  patch['log'] = log;
+  await patchGame(gameId, patch);
 }
 
 export function subscribeToGame(

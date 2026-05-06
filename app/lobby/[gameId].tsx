@@ -44,7 +44,7 @@ export default function LobbyScreen() {
         <Text style={styles.title}>Game Lobby</Text>
         <TouchableOpacity
           style={styles.codeBox}
-          onPress={() => Share.share({ message: `Join my Own It All game! Code: ${gameId}` })}
+          onPress={() => Share.share({ message: `Join my Own It All game!\nhttps://ownitall-production.up.railway.app/?code=${gameId}` })}
         >
           <Text style={styles.codeLabel}>GAME CODE</Text>
           <Text style={styles.codeValue}>{gameId}</Text>

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Platform, Pressable, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth }            from '../../src/hooks/useAuth';
 import { useGameState }       from '../../src/hooks/useGameState';
 import { useTokenAnimation }  from '../../src/hooks/useTokenAnimation';
@@ -12,7 +13,10 @@ import { FloatingText, useFloatingTransactions, PlayerLayout } from '../../src/c
 import { TurnTimer } from '../../src/components/TurnTimer';
 import { ChanceCardOverlay } from '../../src/components/ChanceCardOverlay';
 import { WinOverlay } from '../../src/components/WinOverlay';
+import { leaveGame } from '../../src/firebase/gameService';
 import { PALETTE, GROUP_COLORS } from '../../src/game/boardData';
+
+const SESSION_KEY = 'ownitall_session';
 
 function fmtMoney(m: number): string {
   if (m < 0) return `-${fmtMoney(-m)}`;
@@ -51,6 +55,32 @@ export default function GameScreen() {
     playerLayouts,
   );
 
+
+  // Clear stored session when game finishes so resume banner doesn't linger
+  useEffect(() => {
+    if (gameState?.status === 'finished') {
+      AsyncStorage.removeItem(SESSION_KEY).catch(() => {});
+    }
+  }, [gameState?.status]);
+
+  async function handleLeave() {
+    if (!gameState) return;
+    Alert.alert(
+      'Leave Game',
+      'You will be marked as bankrupt and your properties will be freed. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave', style: 'destructive',
+          onPress: async () => {
+            await leaveGame(gameId, uid, gameState);
+            await AsyncStorage.removeItem(SESSION_KEY);
+            router.replace('/');
+          },
+        },
+      ]
+    );
+  }
 
   // Auto-action when turn timer expires (only fires for the active player)
   function handleTimerExpire() {
@@ -151,10 +181,15 @@ export default function GameScreen() {
           })}
         </View>
 
-        {/* Turn chip — own row so it never fights with player cards */}
-        <View style={[s.turnChip, { backgroundColor: accentColor + '22', borderColor: accentColor + '55' }]}>
-          <View style={[s.chipDot, { backgroundColor: accentColor }]} />
-          <Text style={[s.chipText, { color: accentColor }]} numberOfLines={1}>{turnLabel}</Text>
+        {/* Turn chip + leave button on the same row */}
+        <View style={s.chipRow}>
+          <View style={[s.turnChip, { backgroundColor: accentColor + '22', borderColor: accentColor + '55' }]}>
+            <View style={[s.chipDot, { backgroundColor: accentColor }]} />
+            <Text style={[s.chipText, { color: accentColor }]} numberOfLines={1}>{turnLabel}</Text>
+          </View>
+          <TouchableOpacity style={s.leaveBtn} onPress={handleLeave} activeOpacity={0.7}>
+            <Text style={s.leaveTxt}>Leave</Text>
+          </TouchableOpacity>
         </View>
 
       </View>
@@ -332,14 +367,21 @@ const s = StyleSheet.create({
   playerMoney:  { color: '#2ECC71',     fontSize: 11, fontWeight: '700' },
   activeDot:    { width: 7, height: 7, borderRadius: 4, marginLeft: 2, shadowOpacity: 0.9, shadowRadius: 4 },
 
-  // Turn chip — sits on its own compact row below player cards
+  chipRow: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', marginTop: 4,
+  },
   turnChip: {
-    alignSelf: 'flex-start',
     flexDirection: 'row', alignItems: 'center', gap: 6,
     borderRadius: 16, borderWidth: 1,
     paddingHorizontal: 10, paddingVertical: 4,
-    marginTop: 4,
   },
+  leaveBtn: {
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 12, borderWidth: 1,
+    borderColor: PALETTE.muted + '55',
+  },
+  leaveTxt: { color: PALETTE.muted, fontSize: 11, fontWeight: '700' },
   chipDot:  { width: 6, height: 6, borderRadius: 3 },
   chipText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.3 },
 

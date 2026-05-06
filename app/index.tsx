@@ -3,29 +3,68 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   Alert, KeyboardAvoidingView, Platform, Image,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../src/hooks/useAuth';
-import { createGame, joinGame, deleteStaleLobbies } from '../src/firebase/gameService';
+import { createGame, joinGame, deleteStaleLobbies, getGame } from '../src/firebase/gameService';
+import { HowToPlay } from '../src/components/HowToPlay';
 import { PALETTE } from '../src/game/boardData';
 
+const SESSION_KEY = 'ownitall_session';
+const APP_URL     = 'https://ownitall-production.up.railway.app';
+
 export default function HomeScreen() {
-  const { loading, ensureSignedIn } = useAuth();
-  const [name, setName] = useState('');
-  const [code, setCode] = useState('');
-  const [busy, setBusy] = useState(false);
+  const { loading, user, ensureSignedIn } = useAuth();
+  const params = useLocalSearchParams<{ code?: string }>();
+
+  const [name,        setName]        = useState('');
+  const [code,        setCode]        = useState('');
+  const [busy,        setBusy]        = useState(false);
+  const [showRules,   setShowRules]   = useState(false);
+  const [resumeGame,  setResumeGame]  = useState<{ gameId: string } | null>(null);
+
+  // Pre-fill code from URL param (?code=XXXXX)
+  useEffect(() => {
+    if (params.code) setCode(params.code.toUpperCase());
+  }, [params.code]);
+
+  // Check for an active session the player can resume
+  useEffect(() => {
+    if (loading || !user) return;
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(SESSION_KEY);
+        if (!raw) return;
+        const { gameId, uid } = JSON.parse(raw) as { gameId: string; uid: string };
+        if (uid !== user.uid) return;
+        const game = await getGame(gameId);
+        if (
+          game &&
+          game.status === 'playing' &&
+          game.players[uid] &&
+          !game.players[uid].isBankrupt
+        ) {
+          setResumeGame({ gameId });
+        } else {
+          await AsyncStorage.removeItem(SESSION_KEY);
+        }
+      } catch {}
+    })();
+  }, [loading, user]);
 
   useEffect(() => { deleteStaleLobbies().catch(() => {}); }, []);
 
   if (loading) {
-    return <View style={styles.center}><Text style={styles.dim}>Loading…</Text></View>;
+    return <View style={s.center}><Text style={s.dim}>Loading…</Text></View>;
   }
 
   async function handleCreate() {
     if (!name.trim()) { Alert.alert('Enter your name'); return; }
     setBusy(true);
     try {
-      const user   = await ensureSignedIn();
-      const gameId = await createGame(user.uid, name.trim());
+      const u      = await ensureSignedIn();
+      const gameId = await createGame(u.uid, name.trim());
+      await AsyncStorage.setItem(SESSION_KEY, JSON.stringify({ gameId, uid: u.uid }));
       router.push(`/lobby/${gameId}`);
     } catch (e: any) { Alert.alert('Error', e.message); }
     setBusy(false);
@@ -36,36 +75,55 @@ export default function HomeScreen() {
     if (!code.trim()) { Alert.alert('Enter a game code'); return; }
     setBusy(true);
     try {
-      const user = await ensureSignedIn();
-      await joinGame(code.trim(), user.uid, name.trim());
-      router.push(`/lobby/${code.trim()}`);
+      const u = await ensureSignedIn();
+      await joinGame(code.trim().toUpperCase(), u.uid, name.trim());
+      await AsyncStorage.setItem(SESSION_KEY, JSON.stringify({ gameId: code.trim().toUpperCase(), uid: u.uid }));
+      router.push(`/lobby/${code.trim().toUpperCase()}`);
     } catch (e: any) { Alert.alert('Error', e.message); }
     setBusy(false);
   }
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={s.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       {/* Hero image */}
       <Image
         source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Jemaa_el-Fna_at_dusk.jpg/640px-Jemaa_el-Fna_at_dusk.jpg' }}
-        style={styles.hero}
+        style={s.hero}
         resizeMode="cover"
       />
-      {/* Gradient overlay */}
-      <View style={styles.heroOverlay} />
+      <View style={s.heroOverlay} />
 
-      <View style={styles.content}>
-        {/* Title */}
-        <Text style={styles.title}>Own It All</Text>
-        <Text style={styles.subtitle}>✦  Marrakech Edition  ✦</Text>
+      {/* How to play button */}
+      <TouchableOpacity style={s.rulesBtn} onPress={() => setShowRules(true)}>
+        <Text style={s.rulesBtnTxt}>?</Text>
+      </TouchableOpacity>
+
+      <View style={s.content}>
+        <Text style={s.title}>Own It All</Text>
+        <Text style={s.subtitle}>✦  Marrakech Edition  ✦</Text>
+
+        {/* Resume game banner */}
+        {resumeGame && (
+          <TouchableOpacity
+            style={s.resumeBanner}
+            onPress={() => router.push(`/game/${resumeGame.gameId}`)}
+            activeOpacity={0.85}
+          >
+            <Text style={s.resumeIcon}>▶</Text>
+            <View>
+              <Text style={s.resumeTitle}>Game in progress</Text>
+              <Text style={s.resumeSub}>Tap to rejoin — {resumeGame.gameId}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
 
         {/* Name input */}
-        <Text style={styles.inputLabel}>YOUR NAME</Text>
+        <Text style={s.inputLabel}>YOUR NAME</Text>
         <TextInput
-          style={styles.input}
+          style={s.input}
           placeholder="e.g. Hassan"
           placeholderTextColor={PALETTE.muted}
           value={name}
@@ -74,52 +132,59 @@ export default function HomeScreen() {
           editable={!busy}
         />
 
-        {/* Create */}
-        <TouchableOpacity style={[styles.btn, styles.btnGold]} onPress={handleCreate} disabled={busy}>
-          <Text style={styles.btnTextDark}>{busy ? '…' : '✦  Create New Game'}</Text>
+        <TouchableOpacity style={[s.btn, s.btnGold]} onPress={handleCreate} disabled={busy}>
+          <Text style={s.btnTextDark}>{busy ? '…' : '✦  Create New Game'}</Text>
         </TouchableOpacity>
 
-        {/* Divider */}
-        <View style={styles.sep}>
-          <View style={styles.line} />
-          <Text style={styles.sepText}>or join existing</Text>
-          <View style={styles.line} />
+        <View style={s.sep}>
+          <View style={s.line} />
+          <Text style={s.sepText}>or join existing</Text>
+          <View style={s.line} />
         </View>
 
-        {/* Code input */}
-        <Text style={styles.inputLabel}>GAME CODE</Text>
+        <Text style={s.inputLabel}>GAME CODE</Text>
         <TextInput
-          style={styles.input}
+          style={s.input}
           placeholder="Paste code here"
           placeholderTextColor={PALETTE.muted}
           value={code}
-          onChangeText={setCode}
-          autoCapitalize="none"
+          onChangeText={t => setCode(t.toUpperCase())}
+          autoCapitalize="characters"
           editable={!busy}
         />
 
-        <TouchableOpacity style={[styles.btn, styles.btnTeal]} onPress={handleJoin} disabled={busy}>
-          <Text style={styles.btnTextLight}>{busy ? '…' : 'Join Game'}</Text>
+        <TouchableOpacity style={[s.btn, s.btnTeal]} onPress={handleJoin} disabled={busy}>
+          <Text style={s.btnTextLight}>{busy ? '…' : 'Join Game'}</Text>
         </TouchableOpacity>
       </View>
+
+      <HowToPlay visible={showRules} onClose={() => setShowRules(false)} />
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: PALETTE.bg },
   center:    { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: PALETTE.bg },
   dim:       { color: PALETTE.muted },
 
-  hero: {
-    position: 'absolute', top: 0, left: 0, right: 0,
-    height: 260,
-  },
+  hero: { position: 'absolute', top: 0, left: 0, right: 0, height: 260 },
   heroOverlay: {
-    position: 'absolute', top: 0, left: 0, right: 0,
-    height: 260,
+    position: 'absolute', top: 0, left: 0, right: 0, height: 260,
     backgroundColor: 'rgba(10,10,22,0.65)',
   },
+
+  rulesBtn: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 52 : 28,
+    right: 20,
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1, borderColor: PALETTE.goldLight + '55',
+    alignItems: 'center', justifyContent: 'center',
+    zIndex: 10,
+  },
+  rulesBtnTxt: { color: PALETTE.goldLight, fontSize: 17, fontWeight: '900' },
 
   content: {
     flex: 1,
@@ -129,50 +194,38 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 42,
-    fontWeight: '900',
-    color: PALETTE.goldLight,
-    textAlign: 'center',
-    letterSpacing: 2,
+    fontSize: 42, fontWeight: '900',
+    color: PALETTE.goldLight, textAlign: 'center', letterSpacing: 2,
   },
   subtitle: {
-    fontSize: 13,
-    color: PALETTE.sand,
-    textAlign: 'center',
-    marginBottom: 36,
-    letterSpacing: 3,
+    fontSize: 13, color: PALETTE.sand,
+    textAlign: 'center', marginBottom: 24, letterSpacing: 3,
   },
 
-  inputLabel: {
-    color: PALETTE.muted,
-    fontSize: 10,
-    letterSpacing: 2,
-    marginBottom: 6,
+  resumeBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: PALETTE.teal + '22',
+    borderWidth: 1, borderColor: PALETTE.teal + '55',
+    borderRadius: 14, padding: 14, marginBottom: 20,
   },
+  resumeIcon:  { color: PALETTE.teal, fontSize: 20, fontWeight: '900' },
+  resumeTitle: { color: PALETTE.teal, fontSize: 13, fontWeight: '800' },
+  resumeSub:   { color: PALETTE.muted, fontSize: 11, marginTop: 2 },
+
+  inputLabel: { color: PALETTE.muted, fontSize: 10, letterSpacing: 2, marginBottom: 6 },
   input: {
-    backgroundColor: PALETTE.surface,
-    color: PALETTE.text,
-    padding: 14,
-    borderRadius: 12,
-    fontSize: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#2A2A4A',
+    backgroundColor: PALETTE.surface, color: PALETTE.text,
+    padding: 14, borderRadius: 12, fontSize: 16, marginBottom: 12,
+    borderWidth: 1, borderColor: '#2A2A4A',
   },
 
-  btn: {
-    width: '100%', padding: 16,
-    borderRadius: 12, alignItems: 'center', marginBottom: 8,
-  },
+  btn: { width: '100%', padding: 16, borderRadius: 12, alignItems: 'center', marginBottom: 8 },
   btnGold:      { backgroundColor: PALETTE.goldLight },
   btnTeal:      { backgroundColor: PALETTE.teal },
-  btnTextDark:  { color: PALETTE.bg,   fontSize: 16, fontWeight: '800', letterSpacing: 1 },
-  btnTextLight: { color: '#fff',       fontSize: 16, fontWeight: '800', letterSpacing: 1 },
+  btnTextDark:  { color: PALETTE.bg,  fontSize: 16, fontWeight: '800', letterSpacing: 1 },
+  btnTextLight: { color: '#fff',      fontSize: 16, fontWeight: '800', letterSpacing: 1 },
 
-  sep: {
-    flexDirection: 'row', alignItems: 'center',
-    marginVertical: 18,
-  },
+  sep: { flexDirection: 'row', alignItems: 'center', marginVertical: 18 },
   line:    { flex: 1, height: 1, backgroundColor: '#2A2A4A' },
   sepText: { color: PALETTE.muted, marginHorizontal: 12, fontSize: 12 },
 });
